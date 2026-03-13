@@ -1,0 +1,276 @@
+basePath: /
+definitions:
+  domain.PetSearchFilterResponse:
+    properties:
+      message:
+        type: string
+      petsInfo: {}
+    type: object
+  domain.PetGetInfoByIdResponse:
+    properties:
+      message:
+        type: string
+      petInfo: {}
+    type: object
+  domain.PetRegisterRequest:
+    properties:
+      petDetail:
+        type: string
+      petName:
+        minLength: 0
+        type: string
+    required:
+      - petName
+    type: object
+  domain.PetRegisterResponse:
+    properties:
+      message:
+        type: string
+      pid:
+        type: integer
+    type: object
+  domain.UserDeleteResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  domain.UserLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+      - email
+      - password
+    type: object
+  domain.UserLoginResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  domain.UserRegisterRequest:
+    properties:
+      email:
+        type: string
+      firstName:
+        minLength: 1
+        type: string
+      lastName:
+        minLength: 1
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+      - email
+      - firstName
+      - lastName
+      - password
+    type: object
+  domain.UserRegisterResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  domain.UserUpdateRequest:
+    properties:
+      firstName:
+        minLength: 1
+        type: string
+      lastName:
+        minLength: 1
+        type: string
+    type: object
+  domain.UserUpdateResponse:
+    properties:
+      message:
+        type: string
+    type: object
+host: localhost:3000
+info:
+  contact: {}
+  description: API for pet adoption platform
+  title: Pet Adoption API
+  version: "1.0"
+paths:
+  /api/pet/{pid}:
+    get:
+      description: Retrieve pet by ID
+      parameters:
+        - description: Pet ID
+          in: path
+          name: pid
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/domain.PetGetInfoByIdResponse"
+      summary: Get pet info
+      tags:
+        - pets
+  /api/pet/all:
+    get:
+      description: Retrieve all pets
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/domain.PetSearchFilterResponse"
+      summary: Get all pets
+      tags:
+        - pets
+  /api/pet/register:
+    post:
+      consumes:
+        - application/json
+      description: Register a new pet
+      parameters:
+        - description: Pet Payload
+          in: body
+          name: pet
+          required: true
+          schema:
+            $ref: "#/definitions/domain.PetRegisterRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/domain.PetRegisterResponse"
+      summary: Register pet
+      tags:
+        - pets
+  /api/user/delete:
+    delete:
+      description: Delete authenticated user
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/domain.UserRegisterResponse"
+      summary: Delete user
+      tags:
+        - users
+  /api/user/info:
+    get:
+      description: Get authenticated user profile
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/domain.UserDeleteResponse"
+      summary: Get user info
+      tags:
+        - users
+  /api/user/login:
+    post:
+      consumes:
+        - application/json
+      description: Login using email and password
+      parameters:
+        - description: Login Payload
+          in: body
+          name: credentials
+          required: true
+          schema:
+            $ref: "#/definitions/domain.UserLoginRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/domain.UserLoginResponse"
+      summary: Login user
+      tags:
+        - users
+  /api/user/oauth/{provider}:
+    get:
+      description: Redirect user to OAuth provider
+      parameters:
+        - description: OAuth Provider
+          in: path
+          name: provider
+          required: true
+          type: string
+      responses:
+        "302":
+          description: Found
+          schema:
+            type: string
+      summary: Start OAuth login
+      tags:
+        - users
+  /api/user/oauth/{provider}/callback:
+    get:
+      description: Handle OAuth provider callback
+      parameters:
+        - description: OAuth Provider
+          in: path
+          name: provider
+          required: true
+          type: string
+      responses:
+        "302":
+          description: Found
+          schema:
+            type: string
+      summary: OAuth callback
+      tags:
+        - users
+  /api/user/register:
+    post:
+      consumes:
+        - application/json
+      description: Create new user account
+      parameters:
+        - description: Register Payload
+          in: body
+          name: user
+          required: true
+          schema:
+            $ref: "#/definitions/domain.UserRegisterRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/domain.UserRegisterResponse"
+      summary: Register user
+      tags:
+        - users
+  /api/user/update:
+    put:
+      consumes:
+        - application/json
+      description: Update authenticated user's profile
+      parameters:
+        - description: Update Payload
+          in: body
+          name: user
+          required: true
+          schema:
+            $ref: "#/definitions/domain.UserUpdateRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/domain.UserUpdateResponse"
+      summary: Update user
+      tags:
+        - users
+swagger: "2.0"

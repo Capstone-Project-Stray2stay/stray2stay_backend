@@ -1,60 +1,26 @@
-package http
+package user
 
 import (
-	"net/http"
-
-	"github.com/go-playground/validator/v10"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/markbates/goth/gothic"
-
 	"context"
+	"net/http"
 	"os"
 	"time"
 
-	"github.com/S-nudhana/fiber_template/internal/core/domain"
-	"github.com/S-nudhana/fiber_template/internal/core/service"
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/markbates/goth/gothic"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
+
+	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
 
-type HttpUserHandler struct {
-	service service.UserService
-}
-
-func NewHttpUserHandler(service service.UserService) *HttpUserHandler {
-	return &HttpUserHandler{service: service}
-}
-
-var validate = validator.New()
-
-func AuthRequired(c *fiber.Ctx) error {
-	cookie := c.Cookies("token")
-	if cookie == "" {
-		return fiber.ErrUnauthorized
-	}
-
-	token, err := jwt.Parse(cookie, func(token *jwt.Token) (interface{}, error) {
-		return []byte(os.Getenv("JWT_SECRET")), nil
-	})
-
-	if err != nil || !token.Valid {
-		return fiber.ErrUnauthorized
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return fiber.ErrUnauthorized
-	}
-
-	uid, ok := claims["uid"].(string)
-	if !ok {
-		return fiber.ErrUnauthorized
-	}
-
-	c.Locals("uid", uid)
-	return c.Next()
-}
-
+// BeginOAuth godoc
+// @Summary Start OAuth login
+// @Description Redirect user to OAuth provider
+// @Tags users
+// @Param provider path string true "OAuth Provider"
+// @Success 302 {string} string
+// @Router /api/user/oauth/{provider} [get]
 func (h *HttpUserHandler) BeginOAuth(c *fiber.Ctx) error {
 	provider := c.Params("provider")
 
@@ -67,6 +33,13 @@ func (h *HttpUserHandler) BeginOAuth(c *fiber.Ctx) error {
 	})(c)
 }
 
+// OAuthCallback godoc
+// @Summary OAuth callback
+// @Description Handle OAuth provider callback
+// @Tags users
+// @Param provider path string true "OAuth Provider"
+// @Success 302 {string} string
+// @Router /api/user/oauth/{provider}/callback [get]
 func (h *HttpUserHandler) OAuthCallback(c *fiber.Ctx) error {
 	return adaptor.HTTPHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, err := gothic.CompleteUserAuth(w, r)
@@ -75,14 +48,14 @@ func (h *HttpUserHandler) OAuthCallback(c *fiber.Ctx) error {
 			return
 		}
 
-		status, uid, err := h.service.OAuthLogin(
+		uid, err := h.service.OAuthLogin(
 			r.Context(),
 			user.Email,
 			user.Provider,
 			user.FirstName,
 			user.LastName,
 		)
-		if err != nil || !status {
+		if err != nil {
 			http.Error(w, "OAuth failed", http.StatusUnauthorized)
 			return
 		}
@@ -113,6 +86,15 @@ func (h *HttpUserHandler) OAuthCallback(c *fiber.Ctx) error {
 	})(c)
 }
 
+// Login godoc
+// @Summary Login user
+// @Description Login using email and password
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param credentials body domain.UserLoginRequest true "Login Payload"
+// @Success 200 {object} domain.UserLoginResponse
+// @Router /api/user/login [post]
 func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 	userLoginPayload := new(domain.UserLoginRequest)
 	if err := c.BodyParser(userLoginPayload); err != nil {
@@ -120,14 +102,9 @@ func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 			"error": "Invalid request payload",
 		})
 	}
-	if err := validate.Struct(userLoginPayload); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Incorrect request format",
-		})
-	}
 
-	status, uid, err := h.service.Login(context.Background(), userLoginPayload.Email, userLoginPayload.Password)
-	if err != nil || !status {
+	uid, err := h.service.Login(context.Background(), userLoginPayload.Email, userLoginPayload.Password)
+	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": err.Error(),
 		})
@@ -153,68 +130,58 @@ func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 		Secure:   os.Getenv("ENV") == "production",
 	})
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+	return c.JSON(fiber.Map{
 		"message": "Login successful",
 	})
 }
 
+// Register godoc
+// @Summary Register user
+// @Description Create new user account
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body domain.UserRegisterRequest true "Register Payload"
+// @Success 200 {object} domain.UserRegisterResponse
+// @Router /api/user/register [post]
 func (h *HttpUserHandler) Register(c *fiber.Ctx) error {
 	userRegisterPayload := new(domain.UserRegisterRequest)
+
 	if err := c.BodyParser(userRegisterPayload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request payload",
 		})
 	}
-	if err := validate.Struct(userRegisterPayload); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Incorrect request format",
-		})
-	}
 
-	status, err := h.service.Register(context.Background(), userRegisterPayload.Email, userRegisterPayload.Password, userRegisterPayload.Firstname, userRegisterPayload.Lastname)
-	if err != nil || !status {
+	err := h.service.Register(context.Background(), userRegisterPayload.Email, userRegisterPayload.Password, userRegisterPayload.Firstname, userRegisterPayload.Lastname)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+
+	return c.JSON(fiber.Map{
 		"message": "Registration successful",
 	})
 }
 
+// DeleteUser godoc
+// @Summary Delete user
+// @Description Delete authenticated user
+// @Tags users
+// @Success 200 {object} domain.UserDeleteResponse
+// @Router /api/user/delete [delete]
 func (h *HttpUserHandler) DeleteUser(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
-	status, err := h.service.DeleteUser(context.Background(), uid)
-	if err != nil || !status {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "User deleted successfully",
-	})
-}
 
-func (h *HttpUserHandler) UpdateUser(c *fiber.Ctx) error {
-	uid := c.Locals("uid").(string)
-	userUpdateuserPayload := new(domain.UserUpdateRequest)
-	if err := c.BodyParser(userUpdateuserPayload); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request payload",
-		})
-	}
-	if err := validate.Struct(userUpdateuserPayload); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Incorrect request format",
-		})
-	}
-	status, err := h.service.UpdateUser(context.Background(), uid, userUpdateuserPayload.Firstname, userUpdateuserPayload.Lastname)
-	if err != nil || !status {
+	err := h.service.DeleteUser(context.Background(), uid)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Update user data successfully ",
+
+	return c.JSON(fiber.Map{
+		"message": "User deleted successfully",
 	})
 }

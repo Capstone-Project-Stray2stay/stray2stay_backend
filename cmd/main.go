@@ -1,3 +1,9 @@
+// @title Pet Adoption API
+// @version 1.0
+// @description API for pet adoption platform
+// @host localhost:3000
+// @BasePath /
+
 package main
 
 import (
@@ -15,11 +21,16 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/google"
 
-	adapter "github.com/S-nudhana/fiber_template/internal/adapter/database"
-	httpHandler "github.com/S-nudhana/fiber_template/internal/adapter/handler/http"
-	"github.com/S-nudhana/fiber_template/internal/adapter/handler/router"
-	"github.com/S-nudhana/fiber_template/internal/core/service"
-	"github.com/S-nudhana/fiber_template/internal/infrastructure/database"
+	adapter "github.com/S-nudhana/stray2stay/internal/adapter/database"
+	httpPetHandler "github.com/S-nudhana/stray2stay/internal/adapter/handler/http/pet"
+	httpUserHandler "github.com/S-nudhana/stray2stay/internal/adapter/handler/http/user"
+	"github.com/S-nudhana/stray2stay/internal/adapter/handler/router"
+	"github.com/S-nudhana/stray2stay/internal/core/service"
+	"github.com/S-nudhana/stray2stay/internal/infrastructure/database"
+
+	fiberSwagger "github.com/swaggo/fiber-swagger"
+
+	_ "github.com/S-nudhana/stray2stay/docs"
 )
 
 func main() {
@@ -62,13 +73,19 @@ func main() {
 
 	userRepo := adapter.NewMySQLUserAdapter(db)
 	userService := service.NewUserService(userRepo)
-	userHandler := httpHandler.NewHttpUserHandler(userService)
+	userHandler := httpUserHandler.NewHttpUserHandler(userService)
+
+	petRepo := adapter.NewMySQLPetAdapter(db)
+	petService := service.NewPetService(petRepo)
+	petHandler := httpPetHandler.NewHttpPetHandler(petService)
 
 	app.Get("/api/test", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "API is working!"})
 	})
+	app.Get("/api/swagger/*", fiberSwagger.WrapHandler)
 
 	router.UserRouter(app, userHandler)
+	router.PetRouter(app, petHandler)
 
 	addr := ":3000"
 	log.Printf("Server running at http://localhost%s\n", addr)
