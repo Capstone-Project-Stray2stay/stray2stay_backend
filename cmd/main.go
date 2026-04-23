@@ -55,11 +55,17 @@ func main() {
 			"http://localhost:3000/api/user/oauth/google/callback",
 		),
 	)
-	db, err := database.New()
+	mysql_db, err := database.NewMySQLDatabase()
 	if err != nil {
 		log.Fatal("failed connecting to db:", err)
 	}
-	defer db.Close()
+	defer mysql_db.Close()
+
+	mongoClient, err := database.NewMongoDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	mongo_db := mongoClient.Database("stray2stay")
 
 	app := fiber.New()
 
@@ -68,15 +74,19 @@ func main() {
 	}))
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     os.Getenv("ORIGIN"),
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Authorization",
 		AllowCredentials: true,
+		MaxAge:           300,
 	}))
 
-	userRepo := adapter.NewMySQLUserAdapter(db)
+	userRepo := adapter.NewMySQLUserAdapter(mysql_db)
 	userService := service.NewUserService(userRepo)
 	userHandler := httpUserHandler.NewHttpUserHandler(userService)
 
-	petRepo := adapter.NewMySQLPetAdapter(db)
-	petService := service.NewPetService(petRepo)
+	mysqlPetRepo := adapter.NewMySQLPetAdapter(mysql_db)
+	mongoPetRepo := adapter.NewMongoPetAdapter(mongo_db)
+	petService := service.NewPetService(mysqlPetRepo, mongoPetRepo)
 	petHandler := httpPetHandler.NewHttpPetHandler(petService)
 
 	app.Get("/api/test", func(c *fiber.Ctx) error {

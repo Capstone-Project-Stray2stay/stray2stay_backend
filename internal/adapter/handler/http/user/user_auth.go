@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/markbates/goth/gothic"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
@@ -79,7 +79,7 @@ func (h *HttpUserHandler) OAuthCallback(c *fiber.Ctx) error {
 			HttpOnly: true,
 			Secure:   os.Getenv("ENV") == "production",
 			Path:     "/",
-			SameSite: http.SameSiteLaxMode,
+			SameSite: http.SameSiteStrictMode,
 		})
 
 		http.Redirect(w, r, os.Getenv("ORIGIN"), http.StatusFound)
@@ -100,6 +100,12 @@ func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 	if err := c.BodyParser(userLoginPayload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request payload",
+		})
+	}
+
+	if err := h.validate.Struct(userLoginPayload); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "Incorrect request format",
 		})
 	}
 
@@ -127,6 +133,7 @@ func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 		Value:    signedToken,
 		Expires:  time.Now().Add(72 * time.Hour),
 		HTTPOnly: true,
+		SameSite: "strict",
 		Secure:   os.Getenv("ENV") == "production",
 	})
 
@@ -150,6 +157,12 @@ func (h *HttpUserHandler) Register(c *fiber.Ctx) error {
 	if err := c.BodyParser(userRegisterPayload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request payload",
+		})
+	}
+
+	if err := h.validate.Struct(userRegisterPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Incorrect request format",
 		})
 	}
 

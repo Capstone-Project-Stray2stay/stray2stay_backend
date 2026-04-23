@@ -14,18 +14,25 @@ type PetService interface {
 	PetInfo(ctx context.Context, pid int) (petData *domain.PetInfo, err error)
 	AdoptPet(ctx context.Context, uid string, pid int, contact string) (rid int, err error)
 	SelectPetAdopter(ctx context.Context, rid int) (err error)
+	BreedInfo(ctx context.Context, petType string, petBreed string) (breedData string, err error)
+	AllBreeds(ctx context.Context, petType string) (breedData []string, err error)
+	PetColor(ctx context.Context, petType string) (colorData []domain.PetColorResponse, err error)
 }
 
 type PetServiceImpl struct {
-	petRepo port.PetRepository
+	mysqlRepo port.PetSQLRepository
+	mongoRepo port.PetMongoRepository
 }
 
-func NewPetService(petRepo port.PetRepository) PetService {
-	return &PetServiceImpl{petRepo: petRepo}
+func NewPetService(mysqlRepo port.PetSQLRepository, mongoRepo port.PetMongoRepository) PetService {
+	return &PetServiceImpl{
+		mysqlRepo:   mysqlRepo,
+		mongoRepo: mongoRepo,
+	}
 }
 
 func (s *PetServiceImpl) RegisterPet(ctx context.Context, uid string, petName string, imageAddress json.RawMessage, ageGroup string, gender string, petType string, breed string, color string, healthCondition string, sterilized bool, vaccination bool, address string, addressLat float64, addressLong float64, status bool, note string) (pid int, err error) {
-	pid, err = s.petRepo.CreatePet(uid, petName, imageAddress, ageGroup, gender, petType, breed, color, healthCondition, sterilized, vaccination, address, addressLat, addressLong, status, note)
+	pid, err = s.mysqlRepo.CreatePet(uid, petName, imageAddress, ageGroup, gender, petType, breed, color, healthCondition, sterilized, vaccination, address, addressLat, addressLong, status, note)
 	if err != nil {
 		return -1, err
 	}
@@ -33,7 +40,7 @@ func (s *PetServiceImpl) RegisterPet(ctx context.Context, uid string, petName st
 }
 
 func (s *PetServiceImpl) SearchPets(ctx context.Context, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, userLat float64, userLong float64) (petData []domain.PetsInfo, err error) {
-	data, err := s.petRepo.GetPetsInfo(page, pageSize, petAgeGroup, petGender, petType, petBreed, petColor, userLat, userLong)
+	data, err := s.mysqlRepo.GetPetsInfo(page, pageSize, petAgeGroup, petGender, petType, petBreed, petColor, userLat, userLong)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +48,7 @@ func (s *PetServiceImpl) SearchPets(ctx context.Context, page int, pageSize int,
 }
 
 func (s *PetServiceImpl) PetInfo(ctx context.Context, pid int) (petData *domain.PetInfo, err error) {
-	data, err := s.petRepo.GetPetInfo(pid)
+	data, err := s.mysqlRepo.GetPetInfo(pid)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +56,7 @@ func (s *PetServiceImpl) PetInfo(ctx context.Context, pid int) (petData *domain.
 }
 
 func (s *PetServiceImpl) AdoptPet(ctx context.Context, uid string, pid int, contact string) (rid int, err error) {
-	rid, err = s.petRepo.PostPetAdopt(uid, pid, contact)
+	rid, err = s.mysqlRepo.PostPetAdopt(uid, pid, contact)
 	if err != nil {
 		return rid, err
 	}
@@ -57,9 +64,33 @@ func (s *PetServiceImpl) AdoptPet(ctx context.Context, uid string, pid int, cont
 }
 
 func (s *PetServiceImpl) SelectPetAdopter(ctx context.Context, rid int) (err error) {
-	err = s.petRepo.UpdatePetAdopter(rid)
+	err = s.mysqlRepo.UpdatePetAdopter(rid)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (s *PetServiceImpl) BreedInfo(ctx context.Context, petType string, petBreed string) (breedData string, err error) {
+	breeds, err := s.mongoRepo.GetBreedBehavior(petType, petBreed)
+	if err != nil {
+		return "", err
+	}
+	return breeds, nil
+}
+
+func (s *PetServiceImpl) AllBreeds(ctx context.Context, petType string) (breedData []string, err error) {
+	breeds, err := s.mongoRepo.GetBreeds(petType)
+	if err != nil {
+		return nil, err
+	}
+	return breeds, nil
+}
+
+func (s *PetServiceImpl) PetColor(ctx context.Context, petType string) (colorData []domain.PetColorResponse, err error) {
+	colors, err := s.mongoRepo.GetPetColor(petType)
+	if err != nil {
+		return nil, err
+	}
+	return colors, nil
 }

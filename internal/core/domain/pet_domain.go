@@ -93,3 +93,15 @@ type PetAdoptRequest struct {
 type PetSelectAdopterRequest struct {
 	Rid     int    `json:"rid"`
 }
+type PetAIClassifyRequest struct {
+	Type string `query:"type"`
+}
+
+type PetAIClassifyResponse struct {
+	PetBreed string `json:"pet_breed"`
+}
+
+type PetColorResponse struct {
+	Color string `json:"color"`
+	Image string `json:"image"`
+}

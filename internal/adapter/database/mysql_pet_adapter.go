@@ -11,15 +11,15 @@ import (
 )
 
 type MySQLPetAdapter struct {
-	db *sql.DB
+	mysql_db *sql.DB
 }
 
-func NewMySQLPetAdapter(db *sql.DB) *MySQLPetAdapter {
-	return &MySQLPetAdapter{db: db}
+func NewMySQLPetAdapter(mysql_db *sql.DB) *MySQLPetAdapter {
+	return &MySQLPetAdapter{mysql_db: mysql_db}
 }
 
 func (m *MySQLPetAdapter) CreatePet(uid string, petName string, imageAddress json.RawMessage, ageGroup string, gender string, petType string, breed string, color string, healthCondition string, sterilized bool, vaccination bool, address string, addressLat float64, addressLong float64, status bool, note string) (pid int, err error) {
-	result, err := m.db.Exec(`INSERT INTO Pets (pet_ownerId, pet_name, pet_imageAddress, pet_ageGroup, pet_gender, pet_type, pet_breed, pet_color, pet_healthCondition, pet_sterilized, pet_vaccination, pet_address, pet_addressLat, pet_addressLong, pet_status, pet_note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, uid, petName, imageAddress, ageGroup, gender, petType, breed, color, healthCondition, sterilized, vaccination, address, addressLat, addressLong, status, note)
+	result, err := m.mysql_db.Exec(`INSERT INTO Pets (pet_ownerId, pet_name, pet_imageAddress, pet_ageGroup, pet_gender, pet_type, pet_breed, pet_color, pet_healthCondition, pet_sterilized, pet_vaccination, pet_address, pet_addressLat, pet_addressLong, pet_status, pet_note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, uid, petName, imageAddress, ageGroup, gender, petType, breed, color, healthCondition, sterilized, vaccination, address, addressLat, addressLong, status, note)
 	if err != nil {
 		return -1, errors.New("fail to create pet Data")
 	}
@@ -98,7 +98,7 @@ func (m *MySQLPetAdapter) GetPetsInfo(page int, pageSize int, petAgeGroup string
 
 	args = append(args, pageSize, offset)
 
-	rows, err := m.db.Query(query, args...)
+	rows, err := m.mysql_db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (m *MySQLPetAdapter) GetPetsInfo(page int, pageSize int, petAgeGroup string
 func (m *MySQLPetAdapter) GetPetInfo(pid int) (domain.PetInfo, error) {
 	var pet domain.PetInfo
 
-	err := m.db.QueryRow(`
+	err := m.mysql_db.QueryRow(`
 		SELECT pet_id, pet_name, pet_detail, pet_imageAddress, pet_ageGroup,
 		       pet_gender, pet_type, pet_breed, pet_color, pet_healthCondition,
 		       pet_sterilized, pet_vaccination, pet_address, pet_addressLat,
@@ -177,11 +177,11 @@ func (m *MySQLPetAdapter) GetPetInfo(pid int) (domain.PetInfo, error) {
 
 func (m *MySQLPetAdapter) PostPetAdopt(uid string, pid int, contact string) (rid int, err error) {
 	var petId int
-	err = m.db.QueryRow(`SELECT pet_id FROM Pets WHERE pet_id = ? AND pet_status = ?`, pid, "AVAILABLE").Scan(&petId)
+	err = m.mysql_db.QueryRow(`SELECT pet_id FROM Pets WHERE pet_id = ? AND pet_status = ?`, pid, "AVAILABLE").Scan(&petId)
 	if err != nil {
 		return -1, errors.New("fail to adopt pet")
 	}
-	result, err := m.db.Exec(`
+	result, err := m.mysql_db.Exec(`
 		INSERT INTO Pets_Rehoming (rehome_petId, rehome_adoptorId, rehome_status, rehome_contact)
 		VALUES (?, ?, 'PENDING', ?)
 		WHERE pet_id = ? AND pet_status = 'AVAILABLE'
@@ -198,7 +198,7 @@ func (m *MySQLPetAdapter) PostPetAdopt(uid string, pid int, contact string) (rid
 }
 
 func (m *MySQLPetAdapter) UpdatePetAdopter(rid int) (err error) {
-	tx, err := m.db.Begin()
+	tx, err := m.mysql_db.Begin()
 	defer func() {
 		if err != nil {
 			tx.Rollback()

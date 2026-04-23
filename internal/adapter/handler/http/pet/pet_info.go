@@ -27,6 +27,12 @@ func (h *HttpPetHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
+	if err := h.validate.Struct(petRegisterPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Incorrect request format",
+		})
+	}
+
 	pid, err := h.service.RegisterPet(context.Background(), uid, petRegisterPayload.PetName, petRegisterPayload.PetImageAddress, petRegisterPayload.PetAgeGroup, petRegisterPayload.PetGender, petRegisterPayload.PetType, petRegisterPayload.PetBreed, petRegisterPayload.PetColor, petRegisterPayload.PetHealthCondition, petRegisterPayload.PetSterilized, petRegisterPayload.PetVaccination, petRegisterPayload.PetAddress, petRegisterPayload.PetAddressLat, petRegisterPayload.PetAddressLong, petRegisterPayload.Status, petRegisterPayload.Note)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

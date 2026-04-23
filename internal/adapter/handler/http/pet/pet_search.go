@@ -22,6 +22,13 @@ func (h *HttpPetHandler) PetSearchFilter(c *fiber.Ctx) error {
 			"error": "Invalid query parameters",
 		})
 	}
+
+	if err := h.validate.Struct(petSearchFilterPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Incorrect request format",
+		})
+	}
+
 	petData, err := h.service.SearchPets(context.Background(), petSearchFilterPayload.Page, petSearchFilterPayload.PageSize, petSearchFilterPayload.PetAgeGroup, petSearchFilterPayload.PetGender, petSearchFilterPayload.PetType, petSearchFilterPayload.PetBreed, petSearchFilterPayload.PetColor, petSearchFilterPayload.UserLat, petSearchFilterPayload.UserLong)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -50,6 +57,13 @@ func (h *HttpPetHandler) PetInfo(c *fiber.Ctx) error {
 			"error": "Invalid request payload",
 		})
 	}
+
+	if err := h.validate.Struct(petGetInfoByIdPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Incorrect request format",
+		})
+	}
+
 
 	petData, err := h.service.PetInfo(context.Background(), petGetInfoByIdPayload.Pid)
 	if err != nil {

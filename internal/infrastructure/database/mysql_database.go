@@ -9,13 +9,13 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func New() (*sql.DB, error) {
+func NewMySQLDatabase() (*sql.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
+		os.Getenv("MYSQL_DB_USER"),
+		os.Getenv("MYSQL_DB_PASSWORD"),
+		os.Getenv("MYSQL_DB_HOST"),
+		os.Getenv("MYSQL_DB_PORT"),
+		os.Getenv("MYSQL_DB_NAME"),
 	)
 
 	db, err := sql.Open("mysql", dsn)
@@ -27,6 +27,6 @@ func New() (*sql.DB, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	log.Println("Database connected successfully")
+	log.Println("MySQL Database connected successfully")
 	return db, nil
 }

@@ -16,6 +16,13 @@ func (h *HttpPetHandler) Adopt(c *fiber.Ctx) error {
 		})
 	}
 
+	if err := h.validate.Struct(petAdoptPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Incorrect request format",
+		})
+	}
+
+
 	rid, err := h.service.AdoptPet(c.Context(), uid, petAdoptPayload.Pid, petAdoptPayload.Contact)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -33,6 +40,12 @@ func (h *HttpPetHandler) SelectAdopter(c *fiber.Ctx) error {
 	if err := c.BodyParser(petSelectAdopterPayload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request payload",
+		})
+	}
+
+	if err := h.validate.Struct(petSelectAdopterPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Incorrect request format",
 		})
 	}
 
