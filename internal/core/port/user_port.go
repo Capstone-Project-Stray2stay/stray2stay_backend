@@ -7,6 +7,6 @@ type UserRepository interface {
 	RemoveUser(uid string) (err error)
 	AuthenticateUser(email string, password string) (uid string, err error)
 	OAuthAuthenticateUser(email string, provider string, firstName string, lastName string) (uid string, err error)
-	UpdateUserInfo(uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64) (err error)
+	UpdateUserInfo(uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64, dogBreed string, dogColor string, dogAgeGroup string, dogGender string, catBreed string, catColor string, catAgeGroup string, catGender string) (err error)
 	GetUserInfo(uid string) (userInfo *domain.UserInfo, err error)
 }

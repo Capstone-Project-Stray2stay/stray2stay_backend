@@ -7,15 +7,27 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"time"
-	"strings"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
 
+// AIClassify godoc
+// @Summary Classify pet breed using AI
+// @Description Upload 1–2 pet images to detect the breed via an external AI service
+// @Tags pets
+// @Accept multipart/form-data
+// @Produce json
+// @Param type query string true "Pet type (e.g. CAT, DOG)"
+// @Param images formData file true "Pet image(s) — 1 or 2 files"
+// @Success 200 {object} domain.PetAIClassifyResponse
+// @Failure 400 {object} domain.ErrorResponse
+// @Failure 500 {object} domain.ErrorResponse
+// @Router /api/pet/ai/classify [post]
 func (h *HttpPetHandler) AIClassify(c *fiber.Ctx) error {
 	petAIClassifyPayload := new(domain.PetAIClassifyRequest)
 	if err := c.QueryParser(petAIClassifyPayload); err != nil {
@@ -93,7 +105,14 @@ func (h *HttpPetHandler) AIClassify(c *fiber.Ctx) error {
 	if err := json.Unmarshal(respBody, &aiResp); err != nil {
 		return err
 	}
-	detectedBreed := aiResp.PetBreed
+
+	if len(aiResp.Predictions) == 0 {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "No predictions returned",
+		})
+	}
+
+	detectedBreed := aiResp.Predictions[0].Label
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"pet_breed": detectedBreed,
 	})

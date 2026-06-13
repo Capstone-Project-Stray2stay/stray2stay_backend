@@ -1,40 +1,238 @@
 basePath: /
 definitions:
-  domain.PetSearchFilterResponse:
+  github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetAIClassifyPrediction:
+    properties:
+      confidence:
+        type: number
+      label:
+        type: string
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetAIClassifyResponse:
+    properties:
+      num_images:
+        type: integer
+      predictions:
+        items:
+          $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetAIClassifyPrediction'
+        type: array
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetAdoptRequest:
+    properties:
+      note:
+        type: string
+      pid:
+        type: integer
+      q1_1:
+        type: boolean
+      q1_2:
+        type: boolean
+      q1_3:
+        type: string
+      q2_1:
+        type: string
+      q2_2:
+        type: boolean
+      q2_3:
+        type: boolean
+      q3_1:
+        type: integer
+      q3_2:
+        type: boolean
+      q3_3:
+        type: string
+      q4_1:
+        type: integer
+      q5_1:
+        type: integer
+      q6_1:
+        type: integer
+      q6_2:
+        type: integer
+    required:
+    - pid
+    - q1_1
+    - q1_2
+    - q1_3
+    - q2_1
+    - q2_2
+    - q2_3
+    - q3_1
+    - q3_2
+    - q3_3
+    - q4_1
+    - q5_1
+    - q6_1
+    - q6_2
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetAdoptResponse:
     properties:
       message:
         type: string
-      petsInfo: {}
+      rid:
+        type: integer
     type: object
-  domain.PetGetInfoByIdResponse:
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetGetInfoByIdResponse:
     properties:
       message:
         type: string
       petInfo: {}
     type: object
-  domain.PetRegisterRequest:
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetRegisterRequest:
     properties:
+      note:
+        type: string
+      petAddress:
+        minLength: 0
+        type: string
+      petAddressLat:
+        type: number
+      petAddressLong:
+        type: number
+      petAgeGroup:
+        minLength: 0
+        type: string
+      petBreed:
+        minLength: 0
+        type: string
+      petColor:
+        minLength: 0
+        type: string
       petDetail:
         type: string
+      petGender:
+        minLength: 0
+        type: string
+      petHealthCondition:
+        minLength: 0
+        type: string
+      petImageAddress:
+        items:
+          type: string
+        type: array
       petName:
         minLength: 0
         type: string
+      petPersonality:
+        items:
+          type: string
+        type: array
+      petSpecialCare:
+        minLength: 0
+        type: string
+      petSterilized:
+        type: boolean
+      petType:
+        minLength: 0
+        type: string
+      petVaccination:
+        type: boolean
+      status:
+        type: boolean
     required:
-      - petName
+    - petAddress
+    - petAddressLat
+    - petAddressLong
+    - petAgeGroup
+    - petBreed
+    - petColor
+    - petGender
+    - petHealthCondition
+    - petImageAddress
+    - petName
+    - petPersonality
+    - petSpecialCare
+    - petSterilized
+    - petType
+    - petVaccination
+    - status
     type: object
-  domain.PetRegisterResponse:
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetRegisterResponse:
     properties:
       message:
         type: string
       pid:
         type: integer
     type: object
-  domain.UserDeleteResponse:
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetSearchFilterResponse:
+    properties:
+      message:
+        type: string
+      petsInfo:
+        $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetsInfo'
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetSelectAdopterRequest:
+    properties:
+      rid:
+        type: integer
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetSelectAdopterResponse:
     properties:
       message:
         type: string
     type: object
-  domain.UserLoginRequest:
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetsInfo:
+    properties:
+      petAddress:
+        type: string
+      petAddressLat:
+        type: number
+      petAddressLong:
+        type: number
+      petAgeGroup:
+        type: string
+      petBreed:
+        type: string
+      petColor:
+        type: string
+      petGender:
+        type: string
+      petImageAddress:
+        items:
+          type: string
+        type: array
+      petName:
+        type: string
+      petType:
+        type: string
+      pid:
+        type: integer
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.PetsInfoResponse:
+    properties:
+      message:
+        type: string
+      petsInfo:
+        $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetsInfo'
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.UserDeleteResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.UserInfo:
+    properties:
+      address:
+        type: string
+      firstname:
+        type: string
+      lastname:
+        type: string
+      phone:
+        type: string
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.UserInfoResponse:
+    properties:
+      message:
+        type: string
+      userData:
+        $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserInfo'
+    type: object
+  github_com_S-nudhana_stray2stay_internal_core_domain.UserLoginRequest:
     properties:
       email:
         type: string
@@ -42,15 +240,15 @@ definitions:
         minLength: 8
         type: string
     required:
-      - email
-      - password
+    - email
+    - password
     type: object
-  domain.UserLoginResponse:
+  github_com_S-nudhana_stray2stay_internal_core_domain.UserLoginResponse:
     properties:
       message:
         type: string
     type: object
-  domain.UserRegisterRequest:
+  github_com_S-nudhana_stray2stay_internal_core_domain.UserRegisterRequest:
     properties:
       email:
         type: string
@@ -64,26 +262,49 @@ definitions:
         minLength: 8
         type: string
     required:
-      - email
-      - firstName
-      - lastName
-      - password
+    - email
+    - firstName
+    - lastName
+    - password
     type: object
-  domain.UserRegisterResponse:
+  github_com_S-nudhana_stray2stay_internal_core_domain.UserRegisterResponse:
     properties:
       message:
         type: string
     type: object
-  domain.UserUpdateRequest:
+  github_com_S-nudhana_stray2stay_internal_core_domain.UserUpdateRequest:
     properties:
+      address:
+        minLength: 1
+        type: string
+      catAgeGroup:
+        type: string
+      catBreed:
+        type: string
+      catColor:
+        type: string
+      catGender:
+        type: string
+      dogAgeGroup:
+        type: string
+      dogBreed:
+        type: string
+      dogColor:
+        type: string
+      dogGender:
+        type: string
       firstName:
         minLength: 1
         type: string
       lastName:
         minLength: 1
         type: string
+      phoneNumber:
+        maxLength: 10
+        minLength: 9
+        type: string
     type: object
-  domain.UserUpdateResponse:
+  github_com_S-nudhana_stray2stay_internal_core_domain.UserUpdateResponse:
     properties:
       message:
         type: string
@@ -99,56 +320,173 @@ paths:
     get:
       description: Retrieve pet by ID
       parameters:
-        - description: Pet ID
-          in: path
-          name: pid
-          required: true
-          type: string
+      - description: Pet ID
+        in: path
+        name: pid
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: "#/definitions/domain.PetGetInfoByIdResponse"
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetGetInfoByIdResponse'
       summary: Get pet info
       tags:
-        - pets
+      - pets
+  /api/pet/adopt:
+    post:
+      consumes:
+      - application/json
+      description: Submit an adoption questionnaire form for a specific pet (requires
+        authentication)
+      parameters:
+      - description: Adoption Form Payload
+        in: body
+        name: adoption
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetAdoptRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetAdoptResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Submit adoption request
+      tags:
+      - pets
+  /api/pet/adopt/select:
+    patch:
+      consumes:
+      - application/json
+      description: Accept a pending adoption request, marking the pet as adopted and
+        denying all other requests
+      parameters:
+      - description: Select Adopter Payload
+        in: body
+        name: adopter
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetSelectAdopterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetSelectAdopterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse'
+      summary: Select an adopter
+      tags:
+      - pets
+  /api/pet/ai/classify:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload 1–2 pet images to detect the breed via an external AI service
+      parameters:
+      - description: Pet type (e.g. CAT, DOG)
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: Pet image(s) — 1 or 2 files
+        in: formData
+        name: images
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetAIClassifyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse'
+      summary: Classify pet breed using AI
+      tags:
+      - pets
   /api/pet/all:
     get:
       description: Retrieve all pets
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: "#/definitions/domain.PetSearchFilterResponse"
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetSearchFilterResponse'
       summary: Get all pets
       tags:
-        - pets
+      - pets
+  /api/pet/random:
+    get:
+      consumes:
+      - application/json
+      description: Get a random selection of available cats and dogs for adoption
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetsInfoResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse'
+      summary: Get random pet suggestions
+      tags:
+      - pets
   /api/pet/register:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Register a new pet
       parameters:
-        - description: Pet Payload
-          in: body
-          name: pet
-          required: true
-          schema:
-            $ref: "#/definitions/domain.PetRegisterRequest"
+      - description: Pet Payload
+        in: body
+        name: pet
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetRegisterRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: "#/definitions/domain.PetRegisterResponse"
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetRegisterResponse'
       summary: Register pet
       tags:
-        - pets
+      - pets
   /api/user/delete:
     delete:
       description: Delete authenticated user
@@ -156,54 +494,54 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: "#/definitions/domain.UserRegisterResponse"
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserDeleteResponse'
       summary: Delete user
       tags:
-        - users
+      - users
   /api/user/info:
     get:
       description: Get authenticated user profile
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: "#/definitions/domain.UserDeleteResponse"
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserInfoResponse'
       summary: Get user info
       tags:
-        - users
+      - users
   /api/user/login:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Login using email and password
       parameters:
-        - description: Login Payload
-          in: body
-          name: credentials
-          required: true
-          schema:
-            $ref: "#/definitions/domain.UserLoginRequest"
+      - description: Login Payload
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserLoginRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: "#/definitions/domain.UserLoginResponse"
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserLoginResponse'
       summary: Login user
       tags:
-        - users
+      - users
   /api/user/oauth/{provider}:
     get:
       description: Redirect user to OAuth provider
       parameters:
-        - description: OAuth Provider
-          in: path
-          name: provider
-          required: true
-          type: string
+      - description: OAuth Provider
+        in: path
+        name: provider
+        required: true
+        type: string
       responses:
         "302":
           description: Found
@@ -211,16 +549,16 @@ paths:
             type: string
       summary: Start OAuth login
       tags:
-        - users
+      - users
   /api/user/oauth/{provider}/callback:
     get:
       description: Handle OAuth provider callback
       parameters:
-        - description: OAuth Provider
-          in: path
-          name: provider
-          required: true
-          type: string
+      - description: OAuth Provider
+        in: path
+        name: provider
+        required: true
+        type: string
       responses:
         "302":
           description: Found
@@ -228,49 +566,49 @@ paths:
             type: string
       summary: OAuth callback
       tags:
-        - users
+      - users
   /api/user/register:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Create new user account
       parameters:
-        - description: Register Payload
-          in: body
-          name: user
-          required: true
-          schema:
-            $ref: "#/definitions/domain.UserRegisterRequest"
+      - description: Register Payload
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserRegisterRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: "#/definitions/domain.UserRegisterResponse"
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserRegisterResponse'
       summary: Register user
       tags:
-        - users
+      - users
   /api/user/update:
     put:
       consumes:
-        - application/json
+      - application/json
       description: Update authenticated user's profile
       parameters:
-        - description: Update Payload
-          in: body
-          name: user
-          required: true
-          schema:
-            $ref: "#/definitions/domain.UserUpdateRequest"
+      - description: Update Payload
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserUpdateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: "#/definitions/domain.UserUpdateResponse"
+            $ref: '#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserUpdateResponse'
       summary: Update user
       tags:
-        - users
+      - users
 swagger: "2.0"

@@ -9,14 +9,15 @@ import (
 )
 
 type PetService interface {
-	RegisterPet(ctx context.Context, uid string, petName string, imageAddress json.RawMessage, ageGroup string, gender string, petType string, breed string, color string, healthCondition string, sterilized bool, vaccination bool, address string, addressLat float64, addressLong float64, status bool, note string) (pid int, err error)
+	RegisterPet(ctx context.Context, uid string, petName string, imageAddress json.RawMessage, ageGroup string, gender string, petType string, breed string, color string, personality json.RawMessage, specialCare string, sterilized bool, vaccination bool, address string, addressLat float64, addressLong float64, status bool, note string) (pid int, err error)
 	SearchPets(ctx context.Context, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, userLat float64, userLong float64) (petData []domain.PetsInfo, err error)
 	PetInfo(ctx context.Context, pid int) (petData *domain.PetInfo, err error)
-	AdoptPet(ctx context.Context, uid string, pid int, contact string) (rid int, err error)
+	AdoptPet(ctx context.Context, uid string, pid int, q1_1 bool, q1_2 bool, q1_3 string, q2_1 string, q2_2 bool, q2_3 bool, q3_1 int8, q3_2 bool, q3_3 string, q4_1 int8, q5_1 int8, q6_1 int8, q6_2 int8, note string) (rid int, err error)
 	SelectPetAdopter(ctx context.Context, rid int) (err error)
 	BreedInfo(ctx context.Context, petType string, petBreed string) (breedData string, err error)
 	AllBreeds(ctx context.Context, petType string) (breedData []string, err error)
 	PetColor(ctx context.Context, petType string) (colorData []domain.PetColorResponse, err error)
+	PetRandom(ctx context.Context) (petData []domain.PetsInfo, err error)
 }
 
 type PetServiceImpl struct {
@@ -31,8 +32,8 @@ func NewPetService(mysqlRepo port.PetSQLRepository, mongoRepo port.PetMongoRepos
 	}
 }
 
-func (s *PetServiceImpl) RegisterPet(ctx context.Context, uid string, petName string, imageAddress json.RawMessage, ageGroup string, gender string, petType string, breed string, color string, healthCondition string, sterilized bool, vaccination bool, address string, addressLat float64, addressLong float64, status bool, note string) (pid int, err error) {
-	pid, err = s.mysqlRepo.CreatePet(uid, petName, imageAddress, ageGroup, gender, petType, breed, color, healthCondition, sterilized, vaccination, address, addressLat, addressLong, status, note)
+func (s *PetServiceImpl) RegisterPet(ctx context.Context, uid string, petName string, imageAddress json.RawMessage, ageGroup string, gender string, petType string, breed string, color string, personality json.RawMessage, specialCare string, sterilized bool, vaccination bool, address string, addressLat float64, addressLong float64, status bool, note string) (pid int, err error) {
+	pid, err = s.mysqlRepo.CreatePet(uid, petName, imageAddress, ageGroup, gender, petType, breed, color, personality, specialCare, sterilized, vaccination, address, addressLat, addressLong, status, note)
 	if err != nil {
 		return -1, err
 	}
@@ -55,8 +56,8 @@ func (s *PetServiceImpl) PetInfo(ctx context.Context, pid int) (petData *domain.
 	return &data, nil
 }
 
-func (s *PetServiceImpl) AdoptPet(ctx context.Context, uid string, pid int, contact string) (rid int, err error) {
-	rid, err = s.mysqlRepo.PostPetAdopt(uid, pid, contact)
+func (s *PetServiceImpl) AdoptPet(ctx context.Context, uid string, pid int, q1_1 bool, q1_2 bool, q1_3 string, q2_1 string, q2_2 bool, q2_3 bool, q3_1 int8, q3_2 bool, q3_3 string, q4_1 int8, q5_1 int8, q6_1 int8, q6_2 int8, note string) (rid int, err error) {
+	rid, err = s.mysqlRepo.PostPetAdopt(uid, pid, q1_1, q1_2, q1_3, q2_1, q2_2, q2_3, q3_1, q3_2, q3_3, q4_1, q5_1, q6_1, q6_2, note)
 	if err != nil {
 		return rid, err
 	}
@@ -93,4 +94,12 @@ func (s *PetServiceImpl) PetColor(ctx context.Context, petType string) (colorDat
 		return nil, err
 	}
 	return colors, nil
+}
+
+func (s *PetServiceImpl) PetRandom(ctx context.Context) (petData []domain.PetsInfo, err error) {
+	data, err := s.mysqlRepo.GetPetsSuggestion()
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }

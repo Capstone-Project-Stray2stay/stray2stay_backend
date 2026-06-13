@@ -77,3 +77,26 @@ func (h *HttpPetHandler) PetInfo(c *fiber.Ctx) error {
 		"message":  "Get pet data successfully",
 	})
 }
+
+// PetRandom godoc
+// @Summary Get random pet suggestions
+// @Description Get a random selection of available cats and dogs for adoption
+// @Tags pets
+// @Accept json
+// @Produce json
+// @Success 200 {object} domain.PetsInfoResponse
+// @Failure 500 {object} domain.ErrorResponse
+// @Router /api/pet/random [get]
+func (h *HttpPetHandler) PetRandom(c *fiber.Ctx) error {
+	petData, err := h.service.PetRandom(context.Background())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error to get random pet data",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"petsInfo": petData,
+		"message":  "Get random pet data successfully",
+	})
+}
