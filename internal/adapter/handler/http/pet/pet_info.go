@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"context"
+	"encoding/json"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
@@ -32,8 +33,9 @@ func (h *HttpPetHandler) Register(c *fiber.Ctx) error {
 			"error": "Incorrect request format",
 		})
 	}
-
-	pid, err := h.service.RegisterPet(context.Background(), uid, petRegisterPayload.PetName, petRegisterPayload.PetImageAddress, petRegisterPayload.PetAgeGroup, petRegisterPayload.PetGender, petRegisterPayload.PetType, petRegisterPayload.PetBreed, petRegisterPayload.PetColor, petRegisterPayload.PetHealthCondition, petRegisterPayload.PetSterilized, petRegisterPayload.PetVaccination, petRegisterPayload.PetAddress, petRegisterPayload.PetAddressLat, petRegisterPayload.PetAddressLong, petRegisterPayload.Status, petRegisterPayload.Note)
+	imageBytes, _ := json.Marshal(petRegisterPayload.PetImageAddress)
+	personalityBytes, _ := json.Marshal(petRegisterPayload.PetPersonality)
+	pid, err := h.service.RegisterPet(context.Background(), uid, petRegisterPayload.PetName, imageBytes, petRegisterPayload.PetAgeGroup, petRegisterPayload.PetGender, petRegisterPayload.PetType, petRegisterPayload.PetBreed, petRegisterPayload.PetColor, personalityBytes, petRegisterPayload.PetSpecialCare, petRegisterPayload.PetSterilized, petRegisterPayload.PetVaccination, petRegisterPayload.PetAddress, petRegisterPayload.PetAddressLat, petRegisterPayload.PetAddressLong, petRegisterPayload.Status, petRegisterPayload.Note)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Couldn't register the pet",

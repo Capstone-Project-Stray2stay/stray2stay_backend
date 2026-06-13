@@ -12,7 +12,7 @@ type UserService interface {
 	Login(ctx context.Context, email string, password string) (uid string, err error)
 	Register(ctx context.Context, email string, password string, firstName string, lastName string) (err error)
 	DeleteUser(ctx context.Context, uid string) (err error)
-	UpdateUser(ctx context.Context, uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64) (err error)
+	UpdateUser(ctx context.Context, uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64, dogBreed string, dogColor string, dogAgeGroup string, dogGender string, catBreed string, catColor string, catAgeGroup string, catGender string) (err error)
 	UserInfo(ctx context.Context, uid string) (userData *domain.UserInfo, err error)
 }
 
@@ -56,8 +56,8 @@ func (s *UserServiceImpl) DeleteUser(ctx context.Context, uid string) (err error
 	return nil
 }
 
-func (s *UserServiceImpl) UpdateUser(ctx context.Context, uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64) (err error) {
-	err = s.userRepo.UpdateUserInfo(uid, firstName, lastName, phoneNumber, address, addressLat, addressLong)
+func (s *UserServiceImpl) UpdateUser(ctx context.Context, uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64, dogBreed string, dogColor string, dogAgeGroup string, dogGender string, catBreed string, catColor string, catAgeGroup string, catGender string) (err error) {
+	err = s.userRepo.UpdateUserInfo(uid, firstName, lastName, phoneNumber, address, addressLat, addressLong, dogBreed, dogColor, dogAgeGroup, dogGender, catBreed, catColor, catAgeGroup, catGender)
 	if err != nil {
 		return err
 	}

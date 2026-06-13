@@ -25,6 +25,14 @@ type UserUpdateRequest struct {
 	Lastname    string `json:"lastName" validate:"min=1"`
 	PhoneNumber string `json:"phoneNumber" validate:"min=9,max=10"`
 	Address     string `json:"address" validate:"min=1"`
+	DogBreed	string `json:"dogBreed"`
+	DogColor	string `json:"dogColor"`
+	DogAgeGroup	string `json:"dogAgeGroup"`
+	DogGender	string `json:"dogGender"`
+	CatBreed	string `json:"catBreed"`
+	CatColor	string `json:"catColor"`
+	CatAgeGroup	string `json:"catAgeGroup"`
+	CatGender	string `json:"catGender"`
 }
 
 type UserUpdateResponse struct {

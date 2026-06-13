@@ -12,6 +12,7 @@ func PetRouter(app *fiber.App, petHandler *pet.HttpPetHandler) {
 
 	pet.Get("", petHandler.PetSearchFilter)
 	pet.Get("/:pid", petHandler.PetInfo)
+	pet.Get("/random", petHandler.PetRandom)
 
 	authPet := pet.Group("", middleware.AuthRequired)
 

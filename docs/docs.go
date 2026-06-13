@@ -15,6 +15,154 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/pet/adopt": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Submit an adoption questionnaire form for a specific pet (requires authentication)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pets"
+                ],
+                "summary": "Submit adoption request",
+                "parameters": [
+                    {
+                        "description": "Adoption Form Payload",
+                        "name": "adoption",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetAdoptRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetAdoptResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/pet/adopt/select": {
+            "patch": {
+                "description": "Accept a pending adoption request, marking the pet as adopted and denying all other requests",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pets"
+                ],
+                "summary": "Select an adopter",
+                "parameters": [
+                    {
+                        "description": "Select Adopter Payload",
+                        "name": "adopter",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetSelectAdopterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetSelectAdopterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/pet/ai/classify": {
+            "post": {
+                "description": "Upload 1–2 pet images to detect the breed via an external AI service",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pets"
+                ],
+                "summary": "Classify pet breed using AI",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Pet type (e.g. CAT, DOG)",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Pet image(s) — 1 or 2 files",
+                        "name": "images",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetAIClassifyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/pet/all": {
             "get": {
                 "description": "Retrieve all pets",
@@ -29,7 +177,36 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PetSearchFilterResponse"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetSearchFilterResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/pet/random": {
+            "get": {
+                "description": "Get a random selection of available cats and dogs for adoption",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pets"
+                ],
+                "summary": "Get random pet suggestions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetsInfoResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse"
                         }
                     }
                 }
@@ -55,7 +232,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.PetRegisterRequest"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetRegisterRequest"
                         }
                     }
                 ],
@@ -63,7 +240,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PetRegisterResponse"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetRegisterResponse"
                         }
                     }
                 }
@@ -92,7 +269,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PetGetInfoByIdResponse"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetGetInfoByIdResponse"
                         }
                     }
                 }
@@ -109,7 +286,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.UserRegisterResponse"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserDeleteResponse"
                         }
                     }
                 }
@@ -129,7 +306,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.UserDeleteResponse"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserInfoResponse"
                         }
                     }
                 }
@@ -155,7 +332,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.UserLoginRequest"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserLoginRequest"
                         }
                     }
                 ],
@@ -163,7 +340,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.UserLoginResponse"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserLoginResponse"
                         }
                     }
                 }
@@ -241,7 +418,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.UserRegisterRequest"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserRegisterRequest"
                         }
                     }
                 ],
@@ -249,7 +426,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.UserRegisterResponse"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserRegisterResponse"
                         }
                     }
                 }
@@ -275,7 +452,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.UserUpdateRequest"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserUpdateRequest"
                         }
                     }
                 ],
@@ -283,7 +460,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.UserUpdateResponse"
+                            "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserUpdateResponse"
                         }
                     }
                 }
@@ -291,16 +468,117 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "domain.PetSearchFilterResponse": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetAIClassifyPrediction": {
+            "type": "object",
+            "properties": {
+                "confidence": {
+                    "type": "number"
+                },
+                "label": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetAIClassifyResponse": {
+            "type": "object",
+            "properties": {
+                "num_images": {
+                    "type": "integer"
+                },
+                "predictions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetAIClassifyPrediction"
+                    }
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetAdoptRequest": {
+            "type": "object",
+            "required": [
+                "pid",
+                "q1_1",
+                "q1_2",
+                "q1_3",
+                "q2_1",
+                "q2_2",
+                "q2_3",
+                "q3_1",
+                "q3_2",
+                "q3_3",
+                "q4_1",
+                "q5_1",
+                "q6_1",
+                "q6_2"
+            ],
+            "properties": {
+                "note": {
+                    "type": "string"
+                },
+                "pid": {
+                    "type": "integer"
+                },
+                "q1_1": {
+                    "type": "boolean"
+                },
+                "q1_2": {
+                    "type": "boolean"
+                },
+                "q1_3": {
+                    "type": "string"
+                },
+                "q2_1": {
+                    "type": "string"
+                },
+                "q2_2": {
+                    "type": "boolean"
+                },
+                "q2_3": {
+                    "type": "boolean"
+                },
+                "q3_1": {
+                    "type": "integer"
+                },
+                "q3_2": {
+                    "type": "boolean"
+                },
+                "q3_3": {
+                    "type": "string"
+                },
+                "q4_1": {
+                    "type": "integer"
+                },
+                "q5_1": {
+                    "type": "integer"
+                },
+                "q6_1": {
+                    "type": "integer"
+                },
+                "q6_2": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetAdoptResponse": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string"
                 },
-                "petsInfo": {}
+                "rid": {
+                    "type": "integer"
+                }
             }
         },
-        "domain.PetGetInfoByIdResponse": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetGetInfoByIdResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -309,22 +587,99 @@ const docTemplate = `{
                 "petInfo": {}
             }
         },
-        "domain.PetRegisterRequest": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetRegisterRequest": {
             "type": "object",
             "required": [
-                "petName"
+                "petAddress",
+                "petAddressLat",
+                "petAddressLong",
+                "petAgeGroup",
+                "petBreed",
+                "petColor",
+                "petGender",
+                "petHealthCondition",
+                "petImageAddress",
+                "petName",
+                "petPersonality",
+                "petSpecialCare",
+                "petSterilized",
+                "petType",
+                "petVaccination",
+                "status"
             ],
             "properties": {
+                "note": {
+                    "type": "string"
+                },
+                "petAddress": {
+                    "type": "string",
+                    "minLength": 0
+                },
+                "petAddressLat": {
+                    "type": "number"
+                },
+                "petAddressLong": {
+                    "type": "number"
+                },
+                "petAgeGroup": {
+                    "type": "string",
+                    "minLength": 0
+                },
+                "petBreed": {
+                    "type": "string",
+                    "minLength": 0
+                },
+                "petColor": {
+                    "type": "string",
+                    "minLength": 0
+                },
                 "petDetail": {
                     "type": "string"
+                },
+                "petGender": {
+                    "type": "string",
+                    "minLength": 0
+                },
+                "petHealthCondition": {
+                    "type": "string",
+                    "minLength": 0
+                },
+                "petImageAddress": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "petName": {
                     "type": "string",
                     "minLength": 0
+                },
+                "petPersonality": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "petSpecialCare": {
+                    "type": "string",
+                    "minLength": 0
+                },
+                "petSterilized": {
+                    "type": "boolean"
+                },
+                "petType": {
+                    "type": "string",
+                    "minLength": 0
+                },
+                "petVaccination": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "boolean"
                 }
             }
         },
-        "domain.PetRegisterResponse": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetRegisterResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -335,7 +690,26 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.UserDeleteResponse": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetSearchFilterResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "petsInfo": {
+                    "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetsInfo"
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetSelectAdopterRequest": {
+            "type": "object",
+            "properties": {
+                "rid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetSelectAdopterResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -343,7 +717,95 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.UserLoginRequest": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetsInfo": {
+            "type": "object",
+            "properties": {
+                "petAddress": {
+                    "type": "string"
+                },
+                "petAddressLat": {
+                    "type": "number"
+                },
+                "petAddressLong": {
+                    "type": "number"
+                },
+                "petAgeGroup": {
+                    "type": "string"
+                },
+                "petBreed": {
+                    "type": "string"
+                },
+                "petColor": {
+                    "type": "string"
+                },
+                "petGender": {
+                    "type": "string"
+                },
+                "petImageAddress": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "petName": {
+                    "type": "string"
+                },
+                "petType": {
+                    "type": "string"
+                },
+                "pid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.PetsInfoResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "petsInfo": {
+                    "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.PetsInfo"
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.UserDeleteResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.UserInfo": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "firstname": {
+                    "type": "string"
+                },
+                "lastname": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.UserInfoResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "userData": {
+                    "$ref": "#/definitions/github_com_S-nudhana_stray2stay_internal_core_domain.UserInfo"
+                }
+            }
+        },
+        "github_com_S-nudhana_stray2stay_internal_core_domain.UserLoginRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -359,7 +821,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.UserLoginResponse": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.UserLoginResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -367,7 +829,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.UserRegisterRequest": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.UserRegisterRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -393,7 +855,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.UserRegisterResponse": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.UserRegisterResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -401,9 +863,37 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.UserUpdateRequest": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.UserUpdateRequest": {
             "type": "object",
             "properties": {
+                "address": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "catAgeGroup": {
+                    "type": "string"
+                },
+                "catBreed": {
+                    "type": "string"
+                },
+                "catColor": {
+                    "type": "string"
+                },
+                "catGender": {
+                    "type": "string"
+                },
+                "dogAgeGroup": {
+                    "type": "string"
+                },
+                "dogBreed": {
+                    "type": "string"
+                },
+                "dogColor": {
+                    "type": "string"
+                },
+                "dogGender": {
+                    "type": "string"
+                },
                 "firstName": {
                     "type": "string",
                     "minLength": 1
@@ -411,10 +901,15 @@ const docTemplate = `{
                 "lastName": {
                     "type": "string",
                     "minLength": 1
+                },
+                "phoneNumber": {
+                    "type": "string",
+                    "maxLength": 10,
+                    "minLength": 9
                 }
             }
         },
-        "domain.UserUpdateResponse": {
+        "github_com_S-nudhana_stray2stay_internal_core_domain.UserUpdateResponse": {
             "type": "object",
             "properties": {
                 "message": {

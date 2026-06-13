@@ -139,12 +139,12 @@ func (m *MySQLUserAdapter) RemoveUser(uid string) (err error) {
 	return nil
 }
 
-func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64) (err error) {
+func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64, dogBreed string, dogColor string, dogAgeGroup string, dogGender string, catBreed string, catColor string, catAgeGroup string, catGender string) (err error) {
 	userId, err := uuid.Parse(uid)
 	if err != nil {
 		return errors.New("invalid user ID")
 	}
-
+	
 	result, err := m.db.Exec(`UPDATE Users SET user_firstname = ?, user_lastname = ?, user_phoneNumber = ?, user_address = ?, user_addressLat = ?, user_addressLong = ? WHERE user_id = ?`, firstName, lastName, phoneNumber, address, addressLat, addressLong, userId)
 	if err != nil {
 		return errors.New("failed to update user")
@@ -154,6 +154,29 @@ func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName
 	if rowsAffected == 0 || err != nil {
 		return errors.New("user not found")
 	}
+
+	_, err = m.db.Exec(`SELECT pref_id FROM User_Preferences WHERE pref_userId = ? AND pref_type = 'DOG'`, userId)
+	if err != nil {
+		return errors.New("failed to update user")
+	}
+	if err == sql.ErrNoRows {
+		_, err = m.db.Exec(`INSERT INTO User_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'DOG', ?, ?, ?, ?)`, userId, dogBreed, dogColor, dogAgeGroup, dogGender)
+		if err != nil {
+			return errors.New("failed to update user")
+		}
+	}
+
+	_, err = m.db.Exec(`SELECT pref_id FROM User_Preferences WHERE pref_userId = ? AND pref_type = 'CAT'`, userId)
+	if err != nil {
+		return errors.New("failed to update user")
+	}
+	if err == sql.ErrNoRows {
+		_, err = m.db.Exec(`INSERT INTO User_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'CAT', ?, ?, ?, ?)`, userId, catBreed, catColor, catAgeGroup, catGender)
+		if err != nil {
+			return errors.New("failed to update user")
+		}
+	}
+
 	return nil
 }
 
