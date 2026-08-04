@@ -65,7 +65,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	mongo_db := mongoClient.Database("stray2stay")
+	mongo_db := mongoClient.Database(os.Getenv("MONGO_DB_NAME"))
 
 	app := fiber.New()
 

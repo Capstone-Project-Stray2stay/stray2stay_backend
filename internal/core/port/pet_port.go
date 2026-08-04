@@ -16,6 +16,6 @@ type PetSQLRepository interface {
 }
 type PetMongoRepository interface {
 	GetBreeds(petType string) (breedData []string, err error)
-	GetBreedBehavior(petType string, petBreed string) (breedData string, err error)
-	GetPetColor(petType string) (colorData []domain.PetColorResponse, err error)
+	GetBreedBehavior(petType string, petBreed string) (behaviorData string, err error)
+	GetBreedColors(petType string, petBreed string) (colorData []domain.PetColorResponse, err error)
 }
