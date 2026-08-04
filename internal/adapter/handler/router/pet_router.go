@@ -10,14 +10,17 @@ import (
 func PetRouter(app *fiber.App, petHandler *pet.HttpPetHandler) {
 	pet := app.Group("/api/pets")
 
-	pet.Get("", petHandler.PetSearchFilter)
-	pet.Get("/:pid", petHandler.PetInfo)
 	pet.Get("/random", petHandler.PetRandom)
+	pet.Get("/breeds", petHandler.PetBreeds)
+	pet.Get("/breed/color", petHandler.PetColors)
+	pet.Get("/breed/behavior", petHandler.PetBehavior)
+	pet.Post("/ai/classify", petHandler.AIClassify)
+	pet.Get("/:pid", petHandler.PetInfo)
+	pet.Get("", petHandler.PetSearchFilter)
 
 	authPet := pet.Group("", middleware.AuthRequired)
 
 	authPet.Post("", petHandler.Register)
-	authPet.Post("/ai/classify", petHandler.AIClassify)
 	authPet.Post("/:pid/adopt", petHandler.Adopt)
 	authPet.Post("/:pid/select-adopter", petHandler.SelectAdopter)
 }

@@ -14,10 +14,10 @@ type PetService interface {
 	PetInfo(ctx context.Context, pid int) (petData *domain.PetInfo, err error)
 	AdoptPet(ctx context.Context, uid string, pid int, q1_1 bool, q1_2 bool, q1_3 string, q2_1 string, q2_2 bool, q2_3 bool, q3_1 int8, q3_2 bool, q3_3 string, q4_1 int8, q5_1 int8, q6_1 int8, q6_2 int8, note string) (rid int, err error)
 	SelectPetAdopter(ctx context.Context, rid int) (err error)
-	BreedInfo(ctx context.Context, petType string, petBreed string) (breedData string, err error)
 	AllBreeds(ctx context.Context, petType string) (breedData []string, err error)
-	PetColor(ctx context.Context, petType string) (colorData []domain.PetColorResponse, err error)
+	PetColor(ctx context.Context, petType string, petBreed string) (colorData []domain.PetColorResponse, err error)
 	PetRandom(ctx context.Context) (petData []domain.PetsInfo, err error)
+	PetBehavior(ctx context.Context, petType string, petBreed string) (behaviorData string, err error)
 }
 
 type PetServiceImpl struct {
@@ -72,14 +72,6 @@ func (s *PetServiceImpl) SelectPetAdopter(ctx context.Context, rid int) (err err
 	return nil
 }
 
-func (s *PetServiceImpl) BreedInfo(ctx context.Context, petType string, petBreed string) (breedData string, err error) {
-	breeds, err := s.mongoRepo.GetBreedBehavior(petType, petBreed)
-	if err != nil {
-		return "", err
-	}
-	return breeds, nil
-}
-
 func (s *PetServiceImpl) AllBreeds(ctx context.Context, petType string) (breedData []string, err error) {
 	breeds, err := s.mongoRepo.GetBreeds(petType)
 	if err != nil {
@@ -88,8 +80,8 @@ func (s *PetServiceImpl) AllBreeds(ctx context.Context, petType string) (breedDa
 	return breeds, nil
 }
 
-func (s *PetServiceImpl) PetColor(ctx context.Context, petType string) (colorData []domain.PetColorResponse, err error) {
-	colors, err := s.mongoRepo.GetPetColor(petType)
+func (s *PetServiceImpl) PetColor(ctx context.Context, petType string, petBreed string) (colorData []domain.PetColorResponse, err error) {
+	colors, err := s.mongoRepo.GetBreedColors(petType, petBreed)
 	if err != nil {
 		return nil, err
 	}
@@ -102,4 +94,12 @@ func (s *PetServiceImpl) PetRandom(ctx context.Context) (petData []domain.PetsIn
 		return nil, err
 	}
 	return data, nil
+}
+
+func (s *PetServiceImpl) PetBehavior(ctx context.Context, petType string, petBreed string) (behaviorData string, err error) {
+	behaviors, err := s.mongoRepo.GetBreedBehavior(petType, petBreed)
+	if err != nil {
+		return "", err
+	}
+	return behaviors, nil
 }

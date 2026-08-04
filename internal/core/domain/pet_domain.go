@@ -139,6 +139,39 @@ type PetBreedResponse struct {
 }
 
 type PetColorResponse struct {
-	Color string `json:"color"`
-	Image string `json:"image"`
+	Color string `bson:"color"`
+	Image string `bson:"link"`
+}
+
+type PetBreed struct {
+	BreedName string `bson:"breedName"`
+}
+
+type PetGetBreedsRequest struct {
+	PetType string `query:"petType" validate:"required,oneof=cat dog"`
+}
+
+type PetGetBreedsResponse struct {
+	Breeds  []string `json:"breeds"`
+	Message string   `json:"message"`
+}
+
+type PetGetBehaviorRequest struct {
+	PetType  string `query:"petType" validate:"required,oneof=cat dog"`
+	PetBreed string `query:"petBreed" validate:"required"`
+}
+
+type PetBehaviorResponse struct {
+	Behavior string `json:"behavior"`
+	Message  string `json:"message"`
+}
+
+type PetGetColorRequest struct {
+	PetType  string `query:"petType" validate:"required,oneof=cat dog"`
+	PetBreed string `query:"petBreed" validate:"required"`
+}
+
+type PetGetColorResponse struct {
+	Colors  []string `json:"colors"`
+	Message string   `json:"message"`
 }
