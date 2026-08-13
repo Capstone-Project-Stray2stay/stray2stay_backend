@@ -17,11 +17,12 @@ type UserService interface {
 }
 
 type UserServiceImpl struct {
-	userRepo port.UserRepository
+	userRepo port.UserMySQLRepository
+	uploader port.ImageUploader
 }
 
-func NewUserService(userRepo port.UserRepository) UserService {
-	return &UserServiceImpl{userRepo: userRepo}
+func NewUserService(userRepo port.UserMySQLRepository, uploader port.ImageUploader) UserService {
+	return &UserServiceImpl{userRepo: userRepo, uploader: uploader}
 }
 
 func (s *UserServiceImpl) OAuthLogin(ctx context.Context, email string, provider string, firstName string, lastName string) (uid string, err error) {

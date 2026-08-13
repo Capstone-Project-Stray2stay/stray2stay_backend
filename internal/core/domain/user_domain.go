@@ -25,14 +25,14 @@ type UserUpdateRequest struct {
 	Lastname    string `json:"lastName" validate:"min=1"`
 	PhoneNumber string `json:"phoneNumber" validate:"min=9,max=10"`
 	Address     string `json:"address" validate:"min=1"`
-	DogBreed	string `json:"dogBreed"`
-	DogColor	string `json:"dogColor"`
-	DogAgeGroup	string `json:"dogAgeGroup"`
-	DogGender	string `json:"dogGender"`
-	CatBreed	string `json:"catBreed"`
-	CatColor	string `json:"catColor"`
-	CatAgeGroup	string `json:"catAgeGroup"`
-	CatGender	string `json:"catGender"`
+	DogBreed    string `json:"dogBreed"`
+	DogColor    string `json:"dogColor"`
+	DogAgeGroup string `json:"dogAgeGroup"`
+	DogGender   string `json:"dogGender"`
+	CatBreed    string `json:"catBreed"`
+	CatColor    string `json:"catColor"`
+	CatAgeGroup string `json:"catAgeGroup"`
+	CatGender   string `json:"catGender"`
 }
 
 type UserUpdateResponse struct {
@@ -44,6 +44,7 @@ type UserInfo struct {
 	Lastname  string
 	Phone     string
 	Address   string
+	CoverImage *string
 }
 
 type UserInfoResponse struct {
@@ -53,4 +54,21 @@ type UserInfoResponse struct {
 
 type UserDeleteResponse struct {
 	Message string `json:"message"`
+}
+
+type AdoptorInfo struct {
+	UserID       string `json:"userId"`
+	Firstname    string `json:"firstName"`
+	Lastname     string `json:"lastName"`
+	PhoneNumber  string `json:"phoneNumber"`
+	Address      string `json:"address"`
+	Rid          int    `json:"rehomeId"`
+	RehomeStatus string `json:"rehomeStatus"`
+}
+
+type PetAdoptorsInfo struct {
+	Pid             int           `json:"petId"`
+	PetName         string        `json:"petName"`
+	PetImageAddress string        `json:"petImageAddress"`
+	AdoptorsInfo    []AdoptorInfo `json:"adoptorsInfo"`
 }

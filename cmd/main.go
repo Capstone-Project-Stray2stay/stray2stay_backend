@@ -27,6 +27,7 @@ import (
 	"github.com/S-nudhana/stray2stay/internal/adapter/handler/router"
 	"github.com/S-nudhana/stray2stay/internal/core/service"
 	"github.com/S-nudhana/stray2stay/internal/infrastructure/database"
+	"github.com/S-nudhana/stray2stay/internal/infrastructure/storage"
 
 	fiberSwagger "github.com/swaggo/fiber-swagger"
 
@@ -39,20 +40,19 @@ func main() {
 	}
 
 	store := sessions.NewCookieStore([]byte(os.Getenv("SESSION_SECRET")))
-	store.Options = &sessions.Options{
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   86400,
-		Secure:   os.Getenv("ENV") == "production",
-		SameSite: http.SameSiteLaxMode,
-	}
+	store.MaxAge(86400 * 1)
+	store.Options.Path = "/"
+	store.Options.HttpOnly = true
+	store.Options.Secure = os.Getenv("ENV") == "production"
+	store.Options.SameSite = http.SameSiteLaxMode
 	gothic.Store = store
 
 	goth.UseProviders(
 		google.New(
 			os.Getenv("GOOGLE_CLIENT_ID"),
 			os.Getenv("GOOGLE_CLIENT_SECRET"),
-			"http://localhost:3000/api/user/oauth/google/callback",
+			os.Getenv("GOOGLE_CALLBACK_URL"),
+			"openid", "email", "profile",
 		),
 	)
 	mysql_db, err := database.NewMySQLDatabase()
@@ -66,6 +66,15 @@ func main() {
 		log.Fatal(err)
 	}
 	mongo_db := mongoClient.Database(os.Getenv("MONGO_DB_NAME"))
+
+	uploader, err := storage.NewCloudinaryUploader(
+		os.Getenv("CLOUDINARY_CLOUD_NAME"),
+		os.Getenv("CLOUDINARY_API_KEY"),
+		os.Getenv("CLOUDINARY_API_SECRET"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	app := fiber.New()
 
@@ -81,12 +90,12 @@ func main() {
 	}))
 
 	userRepo := adapter.NewMySQLUserAdapter(mysql_db)
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, uploader)
 	userHandler := httpUserHandler.NewHttpUserHandler(userService)
 
 	mysqlPetRepo := adapter.NewMySQLPetAdapter(mysql_db)
 	mongoPetRepo := adapter.NewMongoPetAdapter(mongo_db)
-	petService := service.NewPetService(mysqlPetRepo, mongoPetRepo)
+	petService := service.NewPetService(mysqlPetRepo, mongoPetRepo, uploader)
 	petHandler := httpPetHandler.NewHttpPetHandler(petService)
 
 	app.Get("/api/test", func(c *fiber.Ctx) error {

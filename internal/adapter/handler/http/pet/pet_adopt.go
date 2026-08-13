@@ -83,3 +83,57 @@ func (h *HttpPetHandler) SelectAdopter(c *fiber.Ctx) error {
 	})
 }
 
+func (h *HttpPetHandler) ScreeningAnswerAdoptor(c *fiber.Ctx) error {
+	screeningAnswerAdoptorPayload := new(domain.ScreeningAnswerAdoptorRequest)
+	if err := c.BodyParser(screeningAnswerAdoptorPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request payload",
+		})
+	}
+
+	if err := h.validate.Struct(screeningAnswerAdoptorPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Incorrect request format",
+		})
+	}
+
+	// Call the service method to handle the screening answers
+	screeningAnswer, err := h.service.ScreeningAnswerAdoptor(c.Context(), screeningAnswerAdoptorPayload);
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to query screening answers",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Screening answers query successfully",
+		"screeningAnswer": screeningAnswer,
+	})
+}
+
+func (h *HttpPetHandler) AllAdoptors(c *fiber.Ctx) error {
+	allAdoptorsPayload := new(domain.AllAdoptorsRequest)
+	if err := c.QueryParser(allAdoptorsPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request payload",
+		})
+	}
+
+	if err := h.validate.Struct(allAdoptorsPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Incorrect request format",
+		})
+	}
+
+	adoptors, err := h.service.AllAdoptors(c.Context(), allAdoptorsPayload.UserID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to retrieve adoptors",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":  "Retrieved adoptors successfully",
+		"adoptors": adoptors,
+	})
+}
