@@ -2,7 +2,7 @@ package port
 
 import "github.com/S-nudhana/stray2stay/internal/core/domain"
 
-type UserRepository interface {
+type UserMySQLRepository interface {
 	CreateUser(email string, password string, firstName string, lastName string) (err error)
 	RemoveUser(uid string) (err error)
 	AuthenticateUser(email string, password string) (uid string, err error)

@@ -51,14 +51,14 @@ func (m *MySQLUserAdapter) CreateUser(email string, password string, firstName s
 
 	_, err = tx.Exec(`
 		INSERT INTO Users
-		(user_id, user_email, user_firstname, user_lastname, user_authType)
-		VALUES (?, ?, ?, ?, ?)
-	`, userId, email, firstName, lastName, "PASS")
+		(user_id, user_email, user_firstname, user_lastname, user_phoneNumber, user_address, user_addressLat, user_addressLong, user_authType)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, userId, email, firstName, lastName, "", "", 0.00, 0.00, "PASS")
 	if err != nil {
 		return errors.New("failed to create user")
 	}
 	_, err = tx.Exec(`
-		INSERT INTO User_Password (password_userId, password_pass)
+		INSERT INTO Users_Password (password_userId, password_pass)
 		VALUES (?, ?)
 	`, userId, hashPassword)
 	if err != nil {
@@ -82,7 +82,8 @@ func (m *MySQLUserAdapter) OAuthAuthenticateUser(
 		SELECT user_id
 		FROM Users
 		WHERE user_email = ? AND user_authType = ?
-	`, email, provider).Scan(&userUID)
+	`, email, "OAUTH").Scan(&userUID)
+
 	if err == nil {
 		return userUID, nil
 	}
@@ -90,14 +91,15 @@ func (m *MySQLUserAdapter) OAuthAuthenticateUser(
 	if err != sql.ErrNoRows {
 		return "", err
 	}
+
 	newUID := uuid.New().String()
 	oAuthUID := newUID + ":" + provider
 
 	_, err = m.db.Exec(`
 		INSERT INTO Users
-		(user_id, user_email, user_firstname, user_lastname, user_authType)
-		VALUES (?, ?, ?, ?, ?)
-	`, oAuthUID, email, firstName, lastName, "OAUTH")
+		(user_id, user_email, user_firstname, user_lastname, user_phoneNumber, user_address, user_addressLat, user_addressLong, user_authType)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, oAuthUID, email, firstName, lastName, "", "", 0.00, 0.00, provider)
 
 	if err != nil {
 		return "", err
@@ -182,16 +184,13 @@ func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName
 
 func (m *MySQLUserAdapter) GetUserInfo(uid string) (userInfo *domain.UserInfo, err error) {
 	var user domain.UserInfo
-
-	userId, err := uuid.Parse(uid)
-	if err != nil {
-		return nil, errors.New("invalid user ID")
-	}
+	
+	userId := uid
 
 	err = m.db.QueryRow(
-		"SELECT user_firstname, user_lastname, user_phoneNumber, user_address FROM Users WHERE user_id = ?",
+		"SELECT user_firstname, user_lastname, user_phoneNumber, user_address, user_imageAddress FROM Users WHERE user_id = ?",
 		userId,
-	).Scan(&user.Firstname, &user.Lastname, &user.Phone, &user.Address)
+	).Scan(&user.Firstname, &user.Lastname, &user.Phone, &user.Address, &user.CoverImage)
 	if err != nil {
 		return nil, errors.New("failed to get user info")
 	}

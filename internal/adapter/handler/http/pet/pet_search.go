@@ -64,7 +64,6 @@ func (h *HttpPetHandler) PetInfo(c *fiber.Ctx) error {
 		})
 	}
 
-
 	petData, err := h.service.PetInfo(context.Background(), petGetInfoByIdPayload.Pid)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -98,83 +97,5 @@ func (h *HttpPetHandler) PetRandom(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"petsInfo": petData,
 		"message":  "Get random pet data successfully",
-	})
-}
-
-func (h *HttpPetHandler) PetBreeds(c *fiber.Ctx) error {
-	PetGetBreedsRequest := new(domain.PetGetBreedsRequest)
-	if err := c.QueryParser(PetGetBreedsRequest); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request payload",
-		})
-	}
-	if err := h.validate.Struct(PetGetBreedsRequest); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Incorrect request format",
-		})
-	}
-
-	breedData, err := h.service.AllBreeds(context.Background(), PetGetBreedsRequest.PetType)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": err,
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"breedData": breedData,
-		"message":   "Get breed data successfully",
-	})
-}
-
-func (h *HttpPetHandler) PetBehavior(c *fiber.Ctx) error {
-	PetGetBehaviorRequest := new(domain.PetGetBehaviorRequest)
-	if err := c.QueryParser(PetGetBehaviorRequest); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request payload",
-		})
-	}
-	if err := h.validate.Struct(PetGetBehaviorRequest); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Incorrect request format",
-		})
-	}
-	
-	behaviorData, err := h.service.PetBehavior(context.Background(), PetGetBehaviorRequest.PetType, PetGetBehaviorRequest.PetBreed)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": err,
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"behaviorData": behaviorData,
-		"message":      "Get breed behavior data successfully",
-	})
-}
-
-func (h *HttpPetHandler) PetColors(c *fiber.Ctx) error {
-	PetGetBehaviorRequest := new(domain.PetGetBehaviorRequest)
-	if err := c.QueryParser(PetGetBehaviorRequest); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request payload",
-		})
-	}
-	if err := h.validate.Struct(PetGetBehaviorRequest); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Incorrect request format",
-		})
-	}
-
-	colorData, err := h.service.PetColor(context.Background(), PetGetBehaviorRequest.PetType, PetGetBehaviorRequest.PetBreed)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": err,
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"colorData": colorData,
-		"message":   "Get breed color data successfully",
 	})
 }

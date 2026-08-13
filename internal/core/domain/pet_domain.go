@@ -1,24 +1,22 @@
 package domain
 
 type PetRegisterRequest struct {
-	PetName            string   `json:"petName" validate:"required,min=0"`
-	PetDetail          string   `json:"petDetail"`
-	PetImageAddress    []string `json:"petImageAddress" validate:"required" swaggertype:"array,string"`
-	PetAgeGroup        string   `json:"petAgeGroup" validate:"required,min=0"`
-	PetGender          string   `json:"petGender" validate:"required,min=0"`
-	PetType            string   `json:"petType" validate:"required,min=0"`
-	PetBreed           string   `json:"petBreed" validate:"required,min=0"`
-	PetColor           string   `json:"petColor" validate:"required,min=0"`
-	PetPersonality     []string `json:"petPersonality" validate:"required" swaggertype:"array,string"`
-	PetSpecialCare     string   `json:"petSpecialCare" validate:"required,min=0"`
-	PetHealthCondition string   `json:"petHealthCondition" validate:"required,min=0"`
-	PetSterilized      bool     `json:"petSterilized" validate:"required"`
-	PetVaccination     bool     `json:"petVaccination" validate:"required"`
-	PetAddress         string   `json:"petAddress" validate:"required,min=0"`
-	PetAddressLat      float64  `json:"petAddressLat" validate:"required"`
-	PetAddressLong     float64  `json:"petAddressLong" validate:"required"`
-	Status             bool     `json:"status" validate:"required"`
-	Note               string   `json:"note"`
+	PetName        string   `form:"petName" validate:"required"`
+	PetDetail      string   `form:"petDetail"`
+	PetAgeGroup    string   `form:"petAgeGroup" validate:"required"`
+	PetGender      string   `form:"petGender" validate:"required"`
+	PetType        string   `form:"petType" validate:"required"`
+	PetBreed       string   `form:"petBreed" validate:"required"`
+	PetColor       string   `form:"petColor" validate:"required"`
+	PetPersonality []string `form:"petPersonality" validate:"required,min=1"`
+	PetSpecialCare string   `form:"petSpecialCare"`
+	PetSterilized  bool     `form:"petSterilized"`
+	PetVaccination []string `form:"petVaccination" validate:"required,min=1,dive,oneof=DHPPi Rabies FVRCP"`
+	PetAddress     string   `form:"petAddress" validate:"required"`
+	PetAddressLat  float64  `form:"petAddressLat" validate:"required"`
+	PetAddressLong float64  `form:"petAddressLong" validate:"required"`
+	Status         bool     `form:"status"`
+	Note           string   `form:"note"`
 }
 
 type PetRegisterResponse struct {
@@ -30,23 +28,24 @@ type PetGetInfoByIdRequest struct {
 	Pid int `json:"petId" validate:"required,gt=0"`
 }
 type PetInfo struct {
-	Pid                int      `json:"pid"`
-	PetName            string   `json:"petName"`
-	PetDetail          string   `json:"petDetail"`
-	PetImageAddress    []string `json:"petImageAddress"`
-	PetAgeGroup        string   `json:"petAgeGroup"`
-	PetGender          string   `json:"petGender"`
-	PetType            string   `json:"petType"`
-	PetBreed           string   `json:"petBreed"`
-	PetColor           string   `json:"petColor"`
-	PetHealthCondition string   `json:"petHealthCondition"`
-	PetSterilized      bool     `json:"petSterilized"`
-	PetVaccination     bool     `json:"petVaccination"`
-	PetAddress         string   `json:"petAddress"`
-	PetAddressLat      float64  `json:"petAddressLat"`
-	PetAddressLong     float64  `json:"petAddressLong"`
-	Status             bool     `json:"status"`
-	Note               string   `json:"note"`
+	Pid             int      `json:"pid"`
+	PetName         string   `json:"petName"`
+	PetDetail       string   `json:"petDetail"`
+	PetImageAddress []string `json:"petImageAddress"`
+	PetPersonality  []string `json:"petPersonality"`
+	PetSpecialCare  string   `json:"petSpecialCare"`
+	PetAgeGroup     string   `json:"petAgeGroup"`
+	PetGender       string   `json:"petGender"`
+	PetType         string   `json:"petType"`
+	PetBreed        string   `json:"petBreed"`
+	PetColor        string   `json:"petColor"`
+	PetSterilized   bool     `json:"petSterilized"`
+	PetVaccination  []string `json:"petVaccination"`
+	PetAddress      string   `json:"petAddress"`
+	PetAddressLat   float64  `json:"petAddressLat"`
+	PetAddressLong  float64  `json:"petAddressLong"`
+	Status          bool     `json:"status"`
+	Note            string   `json:"note"`
 }
 
 type PetGetInfoByIdResponse struct {
@@ -174,4 +173,29 @@ type PetGetColorRequest struct {
 type PetGetColorResponse struct {
 	Colors  []string `json:"colors"`
 	Message string   `json:"message"`
+}
+
+type ScreeningAnswerAdoptorRequest struct {
+	Rid int `json:"rehomePetId" validate:"required"`
+}
+
+type ScreeningAnswer struct {
+	Q1_1 bool
+	Q1_2 bool
+	Q1_3 string
+	Q2_1 string
+	Q2_2 bool
+	Q2_3 bool
+	Q3_1 int8
+	Q3_2 bool
+	Q3_3 string
+	Q4_1 int8
+	Q5_1 int8
+	Q6_1 int8
+	Q6_2 int8
+	Note string
+}
+
+type AllAdoptorsRequest struct {
+	UserID string `query:"uid" validate:"required,gt=0"`
 }
