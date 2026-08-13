@@ -62,3 +62,35 @@ func (h *HttpUserHandler) UserInfo(c *fiber.Ctx) error {
 		"message":  "Get user info successfully",
 	})
 }
+
+func (h *HttpUserHandler) NewUserStatus(c *fiber.Ctx) error {
+	uid := c.Locals("uid").(string)
+
+	userData, err := h.service.NewUserStatus(context.Background(), uid)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error to get user info",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"userData": userData,
+		"message":  "Get user info successfully",
+	})
+}
+
+func (h *HttpUserHandler) UpdateNewUserStatus(c *fiber.Ctx) error {
+	uid := c.Locals("uid").(string)
+
+	userData, err := h.service.UpdateNewUserStatus(context.Background(), uid)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error to get user info",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"userData": userData,
+		"message":  "Get user info successfully",
+	})
+}

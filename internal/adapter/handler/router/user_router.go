@@ -17,7 +17,9 @@ func UserRouter(app *fiber.App, userHandler *user.HttpUserHandler) {
 	user.Get("/authorize", userHandler.Authorize)
 	
 	authUser := user.Group("", middleware.AuthRequired)
-	user.Post("/logout", userHandler.Logout)
+	authUser.Post("/logout", userHandler.Logout)
+	authUser.Get("/status", userHandler.NewUserStatus)
+	authUser.Put("/status", userHandler.UpdateNewUserStatus)
 	authUser.Delete("/delete", userHandler.DeleteUser)
 	authUser.Put("/update", userHandler.UpdateUser)
 	authUser.Get("/info", userHandler.UserInfo)

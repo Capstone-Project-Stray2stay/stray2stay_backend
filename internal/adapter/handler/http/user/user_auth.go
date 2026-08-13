@@ -119,14 +119,12 @@ func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 			"error": "Incorrect request format",
 		})
 	}
-
 	uid, err := h.service.Login(context.Background(), userLoginPayload.Email, userLoginPayload.Password)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
-
 	claims := jwt.MapClaims{
 		"uid": uid,
 		"exp": time.Now().Add(72 * time.Hour).Unix(),
@@ -164,7 +162,6 @@ func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 // @Router /api/user/register [post]
 func (h *HttpUserHandler) Register(c *fiber.Ctx) error {
 	userRegisterPayload := new(domain.UserRegisterRequest)
-
 	if err := c.BodyParser(userRegisterPayload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request payload",
@@ -232,7 +229,7 @@ func (h *HttpUserHandler) Authorize(c *fiber.Ctx) error {
 			"userCoverImage": "",
 		})
 	}
-	
+
 	token, err := jwt.Parse(cookie, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
@@ -243,7 +240,7 @@ func (h *HttpUserHandler) Authorize(c *fiber.Ctx) error {
 			"userCoverImage": "",
 		})
 	}
-	
+
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -252,7 +249,7 @@ func (h *HttpUserHandler) Authorize(c *fiber.Ctx) error {
 			"userCoverImage": "",
 		})
 	}
-	
+
 	uid, ok := claims["uid"].(string)
 	if !ok || uid == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -261,7 +258,7 @@ func (h *HttpUserHandler) Authorize(c *fiber.Ctx) error {
 			"userCoverImage": "",
 		})
 	}
-	
+
 	userInfo, err := h.service.UserInfo(context.Background(), uid)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

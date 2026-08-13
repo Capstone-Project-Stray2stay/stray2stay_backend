@@ -14,6 +14,8 @@ type UserService interface {
 	DeleteUser(ctx context.Context, uid string) (err error)
 	UpdateUser(ctx context.Context, uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64, dogBreed string, dogColor string, dogAgeGroup string, dogGender string, catBreed string, catColor string, catAgeGroup string, catGender string) (err error)
 	UserInfo(ctx context.Context, uid string) (userData *domain.UserInfo, err error)
+	NewUserStatus(ctx context.Context, uid string) (userStatus bool, err error)
+	UpdateNewUserStatus(ctx context.Context, uid string) (userStatus bool, err error)
 }
 
 type UserServiceImpl struct {
@@ -69,6 +71,22 @@ func (s *UserServiceImpl) UserInfo(ctx context.Context, uid string) (userData *d
 	userInfo, err := s.userRepo.GetUserInfo(uid)
 	if err != nil {
 		return nil, err
+	}
+	return userInfo, nil
+}
+
+func (s *UserServiceImpl) NewUserStatus(ctx context.Context, uid string) (userStatus bool, err error) {
+	userInfo, err := s.userRepo.GetNewUserStatus(uid)
+	if err != nil {
+		return false, err
+	}
+	return userInfo, nil
+}
+
+func (s *UserServiceImpl) UpdateNewUserStatus(ctx context.Context, uid string) (userStatus bool, err error) {
+	userInfo, err := s.userRepo.UpdateNewUserStatus(uid)
+	if err != nil {
+		return false, err
 	}
 	return userInfo, nil
 }
