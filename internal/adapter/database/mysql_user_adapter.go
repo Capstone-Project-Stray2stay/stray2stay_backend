@@ -3,7 +3,6 @@ package adapter
 import (
 	"database/sql"
 	"errors"
-
 	"golang.org/x/crypto/bcrypt"
 
 	"os"
@@ -76,9 +75,9 @@ func (m *MySQLUserAdapter) OAuthAuthenticateUser(
 	provider string,
 	firstName string,
 	lastName string,
-) (string, error) {
+) (uid string, err error) {
 	var userUID string
-	err := m.db.QueryRow(`
+	err = m.db.QueryRow(`
 		SELECT user_id
 		FROM Users
 		WHERE user_email = ? AND user_authType = ?
@@ -104,6 +103,17 @@ func (m *MySQLUserAdapter) OAuthAuthenticateUser(
 	if err != nil {
 		return "", err
 	}
+
+	var userStatus bool
+	err = m.db.QueryRow(`
+		SELECT user_newUser
+		FROM Users
+		WHERE user_id = ?
+	`, oAuthUID).Scan(&userStatus)
+
+	if err != nil {
+		return "", err
+	}
 	return oAuthUID, nil
 }
 
@@ -112,15 +122,15 @@ func (m *MySQLUserAdapter) AuthenticateUser(email string, password string) (uid 
 	var userId uuid.UUID
 
 	err = m.db.QueryRow(`
-		SELECT u.user_id, up.password_pass 
+		SELECT u.user_id, up.password_pass
 		FROM Users AS u 
 		JOIN Users_Password AS up ON u.user_id = up.password_userId  
-		WHERE u.user_email = ? && u.authType = 'PASS'
+		WHERE u.user_email = ? && u.user_authType = 'PASS'
 	`, email).Scan(&userId, &storedPassword)
 	if err != nil {
 		return "", errors.New("user not found")
 	}
-
+	
 	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password))
 	if err != nil {
 		return "", errors.New("password does not match")
@@ -130,11 +140,10 @@ func (m *MySQLUserAdapter) AuthenticateUser(email string, password string) (uid 
 }
 
 func (m *MySQLUserAdapter) RemoveUser(uid string) (err error) {
-	userId, err := uuid.Parse(uid)
 	if err != nil {
 		return errors.New("invalid user ID")
 	}
-	_, err = m.db.Exec("DELETE FROM Users WHERE user_id = ?", userId)
+	_, err = m.db.Exec("DELETE FROM Users WHERE user_id = ?", uid)
 	if err != nil {
 		return errors.New("failed to delete user")
 	}
@@ -142,12 +151,11 @@ func (m *MySQLUserAdapter) RemoveUser(uid string) (err error) {
 }
 
 func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64, dogBreed string, dogColor string, dogAgeGroup string, dogGender string, catBreed string, catColor string, catAgeGroup string, catGender string) (err error) {
-	userId, err := uuid.Parse(uid)
 	if err != nil {
 		return errors.New("invalid user ID")
 	}
 	
-	result, err := m.db.Exec(`UPDATE Users SET user_firstname = ?, user_lastname = ?, user_phoneNumber = ?, user_address = ?, user_addressLat = ?, user_addressLong = ? WHERE user_id = ?`, firstName, lastName, phoneNumber, address, addressLat, addressLong, userId)
+	result, err := m.db.Exec(`UPDATE Users SET user_firstname = ?, user_lastname = ?, user_phoneNumber = ?, user_address = ?, user_addressLat = ?, user_addressLong = ? WHERE user_id = ?`, firstName, lastName, phoneNumber, address, addressLat, addressLong, uid)
 	if err != nil {
 		return errors.New("failed to update user")
 	}
@@ -157,23 +165,23 @@ func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName
 		return errors.New("user not found")
 	}
 
-	_, err = m.db.Exec(`SELECT pref_id FROM User_Preferences WHERE pref_userId = ? AND pref_type = 'DOG'`, userId)
+	_, err = m.db.Exec(`SELECT pref_id FROM User_Preferences WHERE pref_userId = ? AND pref_type = 'DOG'`, uid)
 	if err != nil {
 		return errors.New("failed to update user")
 	}
 	if err == sql.ErrNoRows {
-		_, err = m.db.Exec(`INSERT INTO User_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'DOG', ?, ?, ?, ?)`, userId, dogBreed, dogColor, dogAgeGroup, dogGender)
+		_, err = m.db.Exec(`INSERT INTO User_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'DOG', ?, ?, ?, ?)`, uid, dogBreed, dogColor, dogAgeGroup, dogGender)
 		if err != nil {
 			return errors.New("failed to update user")
 		}
 	}
 
-	_, err = m.db.Exec(`SELECT pref_id FROM User_Preferences WHERE pref_userId = ? AND pref_type = 'CAT'`, userId)
+	_, err = m.db.Exec(`SELECT pref_id FROM User_Preferences WHERE pref_userId = ? AND pref_type = 'CAT'`, uid)
 	if err != nil {
 		return errors.New("failed to update user")
 	}
 	if err == sql.ErrNoRows {
-		_, err = m.db.Exec(`INSERT INTO User_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'CAT', ?, ?, ?, ?)`, userId, catBreed, catColor, catAgeGroup, catGender)
+		_, err = m.db.Exec(`INSERT INTO User_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'CAT', ?, ?, ?, ?)`, uid, catBreed, catColor, catAgeGroup, catGender)
 		if err != nil {
 			return errors.New("failed to update user")
 		}
@@ -185,14 +193,38 @@ func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName
 func (m *MySQLUserAdapter) GetUserInfo(uid string) (userInfo *domain.UserInfo, err error) {
 	var user domain.UserInfo
 	
-	userId := uid
-
 	err = m.db.QueryRow(
 		"SELECT user_firstname, user_lastname, user_phoneNumber, user_address, user_imageAddress FROM Users WHERE user_id = ?",
-		userId,
+		uid,
 	).Scan(&user.Firstname, &user.Lastname, &user.Phone, &user.Address, &user.CoverImage)
 	if err != nil {
 		return nil, errors.New("failed to get user info")
 	}
 	return &user, nil
+}
+
+func (m *MySQLUserAdapter) GetNewUserStatus(uid string) (userStatus bool, err error) {
+	var status bool
+	err = m.db.QueryRow(
+		"SELECT user_newUser FROM Users WHERE user_id = ?",
+		uid,
+	).Scan(&status)
+	if err != nil {
+		return false, errors.New("failed to get user status")
+	}
+	return status, nil
+}
+
+func (m *MySQLUserAdapter) UpdateNewUserStatus(uid string) (userStatus bool, err error) {
+	result, err := m.db.Exec("UPDATE Users SET user_newUser = ? WHERE user_id = ?", true, uid)
+	if err != nil {
+		return false, errors.New("failed to update user status")
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return false, errors.New("failed to determine rows affected")
+	}
+
+	return rowsAffected > 0, nil
 }
