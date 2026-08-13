@@ -140,9 +140,6 @@ func (m *MySQLUserAdapter) AuthenticateUser(email string, password string) (uid 
 }
 
 func (m *MySQLUserAdapter) RemoveUser(uid string) (err error) {
-	if err != nil {
-		return errors.New("invalid user ID")
-	}
 	_, err = m.db.Exec("DELETE FROM Users WHERE user_id = ?", uid)
 	if err != nil {
 		return errors.New("failed to delete user")
@@ -151,10 +148,6 @@ func (m *MySQLUserAdapter) RemoveUser(uid string) (err error) {
 }
 
 func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64, dogBreed string, dogColor string, dogAgeGroup string, dogGender string, catBreed string, catColor string, catAgeGroup string, catGender string) (err error) {
-	if err != nil {
-		return errors.New("invalid user ID")
-	}
-	
 	result, err := m.db.Exec(`UPDATE Users SET user_firstname = ?, user_lastname = ?, user_phoneNumber = ?, user_address = ?, user_addressLat = ?, user_addressLong = ? WHERE user_id = ?`, firstName, lastName, phoneNumber, address, addressLat, addressLong, uid)
 	if err != nil {
 		return errors.New("failed to update user")
