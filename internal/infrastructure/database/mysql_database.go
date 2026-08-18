@@ -4,18 +4,15 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
 	_ "github.com/go-sql-driver/mysql"
+
+	"github.com/S-nudhana/stray2stay/internal/infrastructure/config"
 )
 
-func NewMySQLDatabase() (*sql.DB, error) {
+func NewMySQLDatabase(cfg config.MySQLConfig) (*sql.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
-		os.Getenv("MYSQL_DB_USER"),
-		os.Getenv("MYSQL_DB_PASSWORD"),
-		os.Getenv("MYSQL_DB_HOST"),
-		os.Getenv("MYSQL_DB_PORT"),
-		os.Getenv("MYSQL_DB_NAME"),
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name,
 	)
 
 	db, err := sql.Open("mysql", dsn)
