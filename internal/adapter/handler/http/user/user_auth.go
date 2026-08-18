@@ -60,7 +60,7 @@ func (h *HttpUserHandler) OAuthCallback(c *fiber.Ctx) error {
 		uid, err := h.service.OAuthLogin(
 			r.Context(),
 			gothUser.Email,
-			gothUser.Provider,
+			"OAUTH",
 			firstName,
 			lastName,
 		)
