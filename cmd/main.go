@@ -8,13 +8,10 @@ package main
 
 import (
 	"log"
-	"net/http"
-	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/joho/godotenv"
 
 	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
@@ -26,6 +23,7 @@ import (
 	httpUserHandler "github.com/S-nudhana/stray2stay/internal/adapter/handler/http/user"
 	"github.com/S-nudhana/stray2stay/internal/adapter/handler/router"
 	"github.com/S-nudhana/stray2stay/internal/core/service"
+	"github.com/S-nudhana/stray2stay/internal/infrastructure/config"
 	"github.com/S-nudhana/stray2stay/internal/infrastructure/database"
 	"github.com/S-nudhana/stray2stay/internal/infrastructure/storage"
 
@@ -35,42 +33,44 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("config error: %v", err)
 	}
 
-	store := sessions.NewCookieStore([]byte(os.Getenv("SESSION_SECRET")))
+	store := sessions.NewCookieStore([]byte(cfg.Session.Secret))
 	store.MaxAge(86400 * 1)
 	store.Options.Path = "/"
 	store.Options.HttpOnly = true
-	store.Options.Secure = os.Getenv("ENV") == "production"
-	store.Options.SameSite = http.SameSiteLaxMode
+	store.Options.Secure = cfg.Session.Secure
+	store.Options.SameSite = cfg.Session.SameSite
 	gothic.Store = store
 
 	goth.UseProviders(
 		google.New(
-			os.Getenv("GOOGLE_CLIENT_ID"),
-			os.Getenv("GOOGLE_CLIENT_SECRET"),
-			os.Getenv("GOOGLE_CALLBACK_URL"),
+			cfg.Google.ClientID,
+			cfg.Google.ClientSecret,
+			cfg.Google.CallbackURL,
 			"openid", "email", "profile",
 		),
 	)
-	mysql_db, err := database.NewMySQLDatabase()
+
+	mysql_db, err := database.NewMySQLDatabase(cfg.DB.MySQL)
 	if err != nil {
 		log.Fatal("failed connecting to db:", err)
 	}
 	defer mysql_db.Close()
 
-	mongoClient, err := database.NewMongoDatabase()
+	mongoClient, err := database.NewMongoDatabase(cfg.DB.Mongo)
 	if err != nil {
 		log.Fatal(err)
 	}
-	mongo_db := mongoClient.Database(os.Getenv("MONGO_DB_NAME"))
+	mongo_db := mongoClient.Database(cfg.DB.Mongo.DBName)
 
 	uploader, err := storage.NewCloudinaryUploader(
-		os.Getenv("CLOUDINARY_CLOUD_NAME"),
-		os.Getenv("CLOUDINARY_API_KEY"),
-		os.Getenv("CLOUDINARY_API_SECRET"),
+		cfg.Cloudinary.CloudName,
+		cfg.Cloudinary.APIKey,
+		cfg.Cloudinary.APISecret,
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -82,11 +82,11 @@ func main() {
 		Format: "${ip}:${port} ${status} - ${method} ${path}\n",
 	}))
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     os.Getenv("ORIGIN"),
-		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Authorization",
-		AllowCredentials: true,
-		MaxAge:           300,
+		AllowOrigins:     cfg.CORS.AllowOrigins,
+		AllowMethods:     cfg.CORS.AllowMethods,
+		AllowHeaders:     cfg.CORS.AllowHeaders,
+		AllowCredentials: cfg.CORS.AllowCredentials,
+		MaxAge:           cfg.CORS.MaxAge,
 	}))
 
 	userRepo := adapter.NewMySQLUserAdapter(mysql_db)
@@ -106,10 +106,9 @@ func main() {
 	router.UserRouter(app, userHandler)
 	router.PetRouter(app, petHandler)
 
-	addr := ":3000"
-	log.Printf("Server running at http://localhost%s\n", addr)
+	log.Printf("Server running at http://localhost%s\n", cfg.Server.Addr)
 
-	if err := app.Listen(addr); err != nil {
+	if err := app.Listen(cfg.Server.Addr); err != nil {
 		log.Fatal("Server stopped:", err)
 	}
 }
