@@ -21,18 +21,20 @@ type UserLoginResponse struct {
 }
 
 type UserUpdateRequest struct {
-	Firstname   string `json:"firstName" validate:"min=1"`
-	Lastname    string `json:"lastName" validate:"min=1"`
-	PhoneNumber string `json:"phoneNumber" validate:"min=9,max=10"`
-	Address     string `json:"address" validate:"min=1"`
-	DogBreed    string `json:"dogBreed"`
-	DogColor    string `json:"dogColor"`
-	DogAgeGroup string `json:"dogAgeGroup"`
-	DogGender   string `json:"dogGender"`
-	CatBreed    string `json:"catBreed"`
-	CatColor    string `json:"catColor"`
-	CatAgeGroup string `json:"catAgeGroup"`
-	CatGender   string `json:"catGender"`
+	Firstname   string  `json:"firstName" validate:"min=1"`
+	Lastname    string  `json:"lastName" validate:"min=1"`
+	PhoneNumber string  `json:"phoneNumber" validate:"min=9,max=10"`
+	Address     string  `json:"address" validate:"min=1"`
+	AddressLat  float64 `json:"addressLat" validate:"required"`
+	AddressLong float64 `json:"addressLong" validate:"required"`
+	DogBreed    string  `json:"dogBreed"`
+	DogColor    string  `json:"dogColor"`
+	DogAgeGroup string  `json:"dogAgeGroup"`
+	DogGender   string  `json:"dogGender"`
+	CatBreed    string  `json:"catBreed"`
+	CatColor    string  `json:"catColor"`
+	CatAgeGroup string  `json:"catAgeGroup"`
+	CatGender   string  `json:"catGender"`
 }
 
 type UserUpdateResponse struct {
@@ -40,11 +42,19 @@ type UserUpdateResponse struct {
 }
 
 type UserInfo struct {
-	Firstname string
-	Lastname  string
-	Phone     string
-	Address   string
-	CoverImage *string
+	Firstname   string
+	Lastname    string
+	Phone       string
+	Address     string
+	CoverImage  *string
+	DogBreed    string
+	DogColor    string
+	DogAgeGroup string
+	DogGender   string
+	CatBreed    string
+	CatColor    string
+	CatAgeGroup string
+	CatGender   string
 }
 
 type UserInfoResponse struct {
