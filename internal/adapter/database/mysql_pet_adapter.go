@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
@@ -48,7 +49,10 @@ func (m *MySQLPetAdapter) CreatePet(
 		personality, specialCare, sterilized, vaccineTypesStr, address,
 		addressLat, addressLong, status, note)
 	if err != nil {
-		return -1, errors.New("fail to create pet data")
+		// Wrap rather than replace: the driver's message names the offending
+		// column/table, and discarding it left callers with no way to tell a
+		// missing table from a bad value.
+		return -1, fmt.Errorf("fail to create pet data: %w", err)
 	}
 
 	id, err := result.LastInsertId()

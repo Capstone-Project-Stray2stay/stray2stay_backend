@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"context"
+	"log"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
@@ -48,6 +49,9 @@ func (h *HttpPetHandler) Register(c *fiber.Ctx) error {
 
 	pid, err := h.service.RegisterPet(context.Background(), uid, payload.PetName, files, payload.PetAgeGroup, payload.PetGender, payload.PetType, payload.PetBreed, payload.PetColor, payload.PetPersonality, payload.PetSpecialCare, payload.PetSterilized, payload.PetVaccination, payload.PetAddress, payload.PetAddressLat, payload.PetAddressLong, payload.Status, payload.Note)
 	if err != nil {
+		// The underlying cause (Cloudinary upload vs MySQL insert) is the only
+		// thing that makes this actionable, so log it instead of dropping it.
+		log.Printf("register pet failed for uid %s: %v", uid, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Error to register pet",
 		})
