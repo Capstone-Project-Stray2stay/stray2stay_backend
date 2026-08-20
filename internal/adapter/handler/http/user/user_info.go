@@ -26,9 +26,7 @@ func (h *HttpUserHandler) UpdateUser(c *fiber.Ctx) error {
 			"error": "Invalid request payload",
 		})
 	}
-	AddressLat := 1.0
-	AddressLong := 1.0
-	err := h.service.UpdateUser(context.Background(), uid, userUpdatePayload.Firstname, userUpdatePayload.Lastname, userUpdatePayload.PhoneNumber, userUpdatePayload.Address, AddressLat, AddressLong, userUpdatePayload.DogBreed, userUpdatePayload.DogColor, userUpdatePayload.DogAgeGroup, userUpdatePayload.DogGender, userUpdatePayload.CatBreed, userUpdatePayload.CatColor, userUpdatePayload.CatAgeGroup, userUpdatePayload.CatGender)
+	err := h.service.UpdateUser(context.Background(), uid, userUpdatePayload.Firstname, userUpdatePayload.Lastname, userUpdatePayload.PhoneNumber, userUpdatePayload.Address, userUpdatePayload.AddressLat, userUpdatePayload.AddressLong, userUpdatePayload.DogBreed, userUpdatePayload.DogColor, userUpdatePayload.DogAgeGroup, userUpdatePayload.DogGender, userUpdatePayload.CatBreed, userUpdatePayload.CatColor, userUpdatePayload.CatAgeGroup, userUpdatePayload.CatGender)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),

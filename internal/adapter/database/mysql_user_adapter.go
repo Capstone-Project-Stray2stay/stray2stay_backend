@@ -3,10 +3,10 @@ package adapter
 import (
 	"database/sql"
 	"errors"
-	"golang.org/x/crypto/bcrypt"
-
 	"os"
 	"strconv"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/google/uuid"
 
@@ -157,27 +157,33 @@ func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName
 	if rowsAffected == 0 || err != nil {
 		return errors.New("user not found")
 	}
-
-	_, err = m.db.Exec(`SELECT pref_id FROM User_Preferences WHERE pref_userId = ? AND pref_type = 'DOG'`, uid)
-	if err != nil {
+	
+	var dogPrefId int64
+	err = m.db.QueryRow(`SELECT pref_id FROM Users_Preferences WHERE pref_userId = ? AND pref_petType = 'DOG'`, uid).Scan(&dogPrefId)
+	if err != nil && err != sql.ErrNoRows {
 		return errors.New("failed to update user")
 	}
 	if err == sql.ErrNoRows {
-		_, err = m.db.Exec(`INSERT INTO User_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'DOG', ?, ?, ?, ?)`, uid, dogBreed, dogColor, dogAgeGroup, dogGender)
-		if err != nil {
-			return errors.New("failed to update user")
-		}
+		_, err = m.db.Exec(`INSERT INTO Users_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'DOG', ?, ?, ?, ?)`, uid, dogBreed, dogColor, dogAgeGroup, dogGender)
+	} else {
+		_, err = m.db.Exec(`UPDATE Users_Preferences SET pref_breed = ?, pref_color = ?, pref_ageGroup = ?, pref_gender = ? WHERE pref_id = ?`, dogBreed, dogColor, dogAgeGroup, dogGender, dogPrefId)
 	}
-
-	_, err = m.db.Exec(`SELECT pref_id FROM User_Preferences WHERE pref_userId = ? AND pref_type = 'CAT'`, uid)
 	if err != nil {
 		return errors.New("failed to update user")
 	}
+
+	var catPrefId int64
+	err = m.db.QueryRow(`SELECT pref_id FROM Users_Preferences WHERE pref_userId = ? AND pref_petType = 'CAT'`, uid).Scan(&catPrefId)
+	if err != nil && err != sql.ErrNoRows {
+		return errors.New("failed to update user")
+	}
 	if err == sql.ErrNoRows {
-		_, err = m.db.Exec(`INSERT INTO User_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'CAT', ?, ?, ?, ?)`, uid, catBreed, catColor, catAgeGroup, catGender)
-		if err != nil {
-			return errors.New("failed to update user")
-		}
+		_, err = m.db.Exec(`INSERT INTO Users_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'CAT', ?, ?, ?, ?)`, uid, catBreed, catColor, catAgeGroup, catGender)
+	} else {
+		_, err = m.db.Exec(`UPDATE Users_Preferences SET pref_breed = ?, pref_color = ?, pref_ageGroup = ?, pref_gender = ? WHERE pref_id = ?`, catBreed, catColor, catAgeGroup, catGender, catPrefId)
+	}
+	if err != nil {
+		return errors.New("failed to update user")
 	}
 
 	return nil
@@ -193,6 +199,23 @@ func (m *MySQLUserAdapter) GetUserInfo(uid string) (userInfo *domain.UserInfo, e
 	if err != nil {
 		return nil, errors.New("failed to get user info")
 	}
+
+	err = m.db.QueryRow(
+		`SELECT pref_breed, pref_color, pref_ageGroup, pref_gender FROM Users_Preferences WHERE pref_userId = ? AND pref_petType = 'DOG'`,
+		uid,
+	).Scan(&user.DogBreed, &user.DogColor, &user.DogAgeGroup, &user.DogGender)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, errors.New("failed to get user info")
+	}
+
+	err = m.db.QueryRow(
+		`SELECT pref_breed, pref_color, pref_ageGroup, pref_gender FROM Users_Preferences WHERE pref_userId = ? AND pref_petType = 'CAT'`,
+		uid,
+	).Scan(&user.CatBreed, &user.CatColor, &user.CatAgeGroup, &user.CatGender)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, errors.New("failed to get user info")
+	}
+
 	return &user, nil
 }
 
@@ -209,7 +232,7 @@ func (m *MySQLUserAdapter) GetNewUserStatus(uid string) (userStatus bool, err er
 }
 
 func (m *MySQLUserAdapter) UpdateNewUserStatus(uid string) (userStatus bool, err error) {
-	result, err := m.db.Exec("UPDATE Users SET user_newUser = ? WHERE user_id = ?", true, uid)
+	result, err := m.db.Exec("UPDATE Users SET user_newUser = ? WHERE user_id = ?", false, uid)
 	if err != nil {
 		return false, errors.New("failed to update user status")
 	}

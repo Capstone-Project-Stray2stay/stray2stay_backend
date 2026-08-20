@@ -199,7 +199,7 @@ func (m *MySQLPetAdapter) GetPetsSuggestion() (petData []domain.PetsInfo, err er
 		FROM Pets
 		WHERE pet_status = 'AVAILABLE' AND pet_type = ?
 		ORDER BY pet_createdAt DESC
-		LIMIT 4
+		LIMIT 8
 	`
 
 	pets := make([]domain.PetsInfo, 0)
