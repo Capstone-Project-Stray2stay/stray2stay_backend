@@ -189,6 +189,33 @@ func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName
 	return nil
 }
 
+func (m *MySQLUserAdapter) GetUserImage(uid string) (imageAddress *string, err error) {
+	var image sql.NullString
+	err = m.db.QueryRow("SELECT user_imageAddress FROM Users WHERE user_id = ?", uid).Scan(&image)
+	if err != nil {
+		return nil, errors.New("failed to get user image")
+	}
+
+	if !image.Valid {
+		return nil, nil
+	}
+	return &image.String, nil
+}
+
+func (m *MySQLUserAdapter) UpdateUserImage(uid string, imageAddress string) (err error) {
+	result, err := m.db.Exec("UPDATE Users SET user_imageAddress = ? WHERE user_id = ?", imageAddress, uid)
+	if err != nil {
+		return errors.New("failed to update user image")
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if rowsAffected == 0 || err != nil {
+		return errors.New("user not found")
+	}
+
+	return nil
+}
+
 func (m *MySQLUserAdapter) GetUserInfo(uid string) (userInfo *domain.UserInfo, err error) {
 	var user domain.UserInfo
 	

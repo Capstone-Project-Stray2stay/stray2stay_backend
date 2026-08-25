@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"mime/multipart"
+	"strings"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 	"github.com/S-nudhana/stray2stay/internal/core/port"
@@ -11,7 +12,7 @@ import (
 
 type PetService interface {
 	RegisterPet(ctx context.Context, uid string, petName string, files []*multipart.FileHeader, ageGroup string, gender string, petType string, breed string, color string, personality []string, specialCare string, sterilized bool, vaccination []string, address string, addressLat float64, addressLong float64, status bool, note string) (pid int, err error)
-	SearchPets(ctx context.Context, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, userLat float64, userLong float64) (petData []domain.PetsInfo, err error)
+	SearchPets(ctx context.Context, uid string, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, petLocation string, userLat float64, userLong float64) (petData []domain.PetsInfo, totalCount int, err error)
 	PetInfo(ctx context.Context, pid int) (petData *domain.PetInfo, err error)
 	AdoptPet(ctx context.Context, uid string, pid int, q1_1 bool, q1_2 bool, q1_3 string, q2_1 string, q2_2 bool, q2_3 bool, q3_1 int8, q3_2 bool, q3_3 string, q4_1 int8, q5_1 int8, q6_1 int8, q6_2 int8, note string) (rid int, err error)
 	SelectPetAdopter(ctx context.Context, rid int) (err error)
@@ -27,13 +28,15 @@ type PetServiceImpl struct {
 	mysqlRepo port.PetSQLRepository
 	mongoRepo port.PetMongoRepository
 	uploader  port.ImageUploader
+	userRepo  port.UserMySQLRepository
 }
 
-func NewPetService(mysqlRepo port.PetSQLRepository, mongoRepo port.PetMongoRepository, uploader port.ImageUploader) PetService {
+func NewPetService(mysqlRepo port.PetSQLRepository, mongoRepo port.PetMongoRepository, uploader port.ImageUploader, userRepo port.UserMySQLRepository) PetService {
 	return &PetServiceImpl{
 		mysqlRepo: mysqlRepo,
 		mongoRepo: mongoRepo,
 		uploader:  uploader,
+		userRepo:  userRepo,
 	}
 }
 
@@ -60,12 +63,75 @@ func (s *PetServiceImpl) RegisterPet(ctx context.Context, uid string, petName st
 	return pid, nil
 }
 
-func (s *PetServiceImpl) SearchPets(ctx context.Context, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, userLat float64, userLong float64) (petData []domain.PetsInfo, err error) {
-	data, err := s.mysqlRepo.GetPetsInfo(page, pageSize, petAgeGroup, petGender, petType, petBreed, petColor, userLat, userLong)
-	if err != nil {
-		return nil, err
+func (s *PetServiceImpl) SearchPets(ctx context.Context, uid string, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, petLocation string, userLat float64, userLong float64) (petData []domain.PetsInfo, totalCount int, err error) {
+	if uid != "" {
+		petAgeGroup, petGender, petBreed, petColor, petLocation = s.applyUserDefaults(
+			uid, petType, petAgeGroup, petGender, petBreed, petColor, petLocation,
+		)
 	}
-	return data, nil
+
+	data, totalCount, err := s.mysqlRepo.GetPetsInfo(page, pageSize, petAgeGroup, petGender, petType, petBreed, petColor, petLocation, userLat, userLong)
+	if err != nil {
+		return nil, 0, err
+	}
+	return data, totalCount, nil
+}
+
+// applyUserDefaults fills any blank filter with the logged-in user's saved
+// defaults: breed/color/gender/ageGroup from Users_Preferences (species-
+// specific, so these only apply once petType is "dog" or "cat" — with no
+// species picked there's no single preference row to fall back to), and
+// location from the user's own profile address. A lookup failure is treated
+// as "no defaults available" rather than failing the whole search.
+func (s *PetServiceImpl) applyUserDefaults(uid string, petType string, petAgeGroup string, petGender string, petBreed string, petColor string, petLocation string) (string, string, string, string, string) {
+	userInfo, err := s.userRepo.GetUserInfo(uid)
+	if err != nil {
+		return petAgeGroup, petGender, petBreed, petColor, petLocation
+	}
+
+	switch petType {
+	case "dog":
+		if petBreed == "" {
+			petBreed = userInfo.DogBreed
+		}
+		if petColor == "" {
+			petColor = userInfo.DogColor
+		}
+		if petAgeGroup == "" {
+			petAgeGroup = userInfo.DogAgeGroup
+		}
+		if petGender == "" {
+			petGender = userInfo.DogGender
+		}
+	case "cat":
+		if petBreed == "" {
+			petBreed = userInfo.CatBreed
+		}
+		if petColor == "" {
+			petColor = userInfo.CatColor
+		}
+		if petAgeGroup == "" {
+			petAgeGroup = userInfo.CatAgeGroup
+		}
+		if petGender == "" {
+			petGender = userInfo.CatGender
+		}
+	}
+
+	if petLocation == "" {
+		petLocation = provinceFromAddress(userInfo.Address)
+	}
+
+	return petAgeGroup, petGender, petBreed, petColor, petLocation
+}
+
+// provinceFromAddress pulls the province out of an address built by the
+// frontend's joinAddress/resolveLocation as "street, subDistrict, district,
+// province" — the province is always the last comma-separated segment.
+func provinceFromAddress(address string) string {
+	parts := strings.Split(address, ",")
+	last := strings.TrimSpace(parts[len(parts)-1])
+	return last
 }
 
 func (s *PetServiceImpl) PetInfo(ctx context.Context, pid int) (petData *domain.PetInfo, err error) {

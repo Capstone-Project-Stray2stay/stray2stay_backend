@@ -2,6 +2,7 @@ package pet
 
 import (
 	"context"
+	"math"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -29,16 +30,33 @@ func (h *HttpPetHandler) PetSearchFilter(c *fiber.Ctx) error {
 		})
 	}
 
-	petData, err := h.service.SearchPets(context.Background(), petSearchFilterPayload.Page, petSearchFilterPayload.PageSize, petSearchFilterPayload.PetAgeGroup, petSearchFilterPayload.PetGender, petSearchFilterPayload.PetType, petSearchFilterPayload.PetBreed, petSearchFilterPayload.PetColor, petSearchFilterPayload.UserLat, petSearchFilterPayload.UserLong)
+	// Set by middleware.OptionalAuth only when a valid session is present —
+	// empty for anonymous callers, who get no preference-based fallback.
+	uid, _ := c.Locals("uid").(string)
+
+	petData, totalCount, err := h.service.SearchPets(context.Background(), uid, petSearchFilterPayload.Page, petSearchFilterPayload.PageSize, petSearchFilterPayload.PetAgeGroup, petSearchFilterPayload.PetGender, petSearchFilterPayload.PetType, petSearchFilterPayload.PetBreed, petSearchFilterPayload.PetColor, petSearchFilterPayload.PetLocation, petSearchFilterPayload.UserLat, petSearchFilterPayload.UserLong)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Error to get all pets data",
 		})
 	}
 
+	// Mirrors GetPetsInfo's own default so totalPages lines up with the page
+	// size actually used for the query.
+	pageSize := petSearchFilterPayload.PageSize
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	totalPages := int(math.Ceil(float64(totalCount) / float64(pageSize)))
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
 	return c.JSON(fiber.Map{
-		"petsInfo": petData,
-		"message":  "Get all pets data successfully",
+		"petsInfo":   petData,
+		"totalCount": totalCount,
+		"totalPages": totalPages,
+		"message":    "Get all pets data successfully",
 	})
 }
 

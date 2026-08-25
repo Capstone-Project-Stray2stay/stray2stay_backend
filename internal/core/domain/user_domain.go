@@ -41,6 +41,11 @@ type UserUpdateResponse struct {
 	Message string `json:"message"`
 }
 
+type UserUpdateImageResponse struct {
+	ImageAddress string `json:"imageAddress"`
+	Message      string `json:"message"`
+}
+
 type UserInfo struct {
 	Firstname   string
 	Lastname    string

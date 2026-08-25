@@ -95,7 +95,7 @@ func main() {
 
 	mysqlPetRepo := adapter.NewMySQLPetAdapter(mysql_db)
 	mongoPetRepo := adapter.NewMongoPetAdapter(mongo_db)
-	petService := service.NewPetService(mysqlPetRepo, mongoPetRepo, uploader)
+	petService := service.NewPetService(mysqlPetRepo, mongoPetRepo, uploader, userRepo)
 	petHandler := httpPetHandler.NewHttpPetHandler(petService)
 
 	app.Get("/api/test", func(c *fiber.Ctx) error {

@@ -38,6 +38,38 @@ func (h *HttpUserHandler) UpdateUser(c *fiber.Ctx) error {
 	})
 }
 
+// UpdateUserImage godoc
+// @Summary Update user profile image
+// @Description Upload and set the authenticated user's profile image
+// @Tags users
+// @Accept multipart/form-data
+// @Produce json
+// @Param image formData file true "Profile image"
+// @Success 200 {object} domain.UserUpdateImageResponse
+// @Router /api/user/image [put]
+func (h *HttpUserHandler) UpdateUserImage(c *fiber.Ctx) error {
+	uid := c.Locals("uid").(string)
+
+	file, err := c.FormFile("image")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Image file is required",
+		})
+	}
+
+	imageURL, err := h.service.UpdateUserImage(context.Background(), uid, file)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"imageAddress": imageURL,
+		"message":      "Update user image successfully",
+	})
+}
+
 // UserInfo godoc
 // @Summary Get user info
 // @Description Get authenticated user profile

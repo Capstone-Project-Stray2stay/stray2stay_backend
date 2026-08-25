@@ -61,13 +61,16 @@ type PetSearchFilterRequest struct {
 	PetType     string  `query:"petType"`
 	PetBreed    string  `query:"petBreed"`
 	PetColor    string  `query:"petColor"`
+	PetLocation string  `query:"petLocation"`
 	UserLat     float64 `query:"userLat"`
 	UserLong    float64 `query:"userLong"`
 }
 
 type PetSearchFilterResponse struct {
-	PetsInfo PetsInfo `json:"petsInfo"`
-	Message  string   `json:"message"`
+	PetsInfo   []PetsInfo `json:"petsInfo"`
+	TotalCount int        `json:"totalCount"`
+	TotalPages int        `json:"totalPages"`
+	Message    string     `json:"message"`
 }
 type PetsInfoResponse struct {
 	PetsInfo PetsInfo `json:"petsInfo"`
