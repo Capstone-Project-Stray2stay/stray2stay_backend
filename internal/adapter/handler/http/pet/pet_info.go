@@ -2,7 +2,6 @@ package pet
 
 import (
 	"github.com/gofiber/fiber/v2"
-
 	"context"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"

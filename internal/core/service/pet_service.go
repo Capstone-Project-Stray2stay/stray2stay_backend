@@ -11,7 +11,7 @@ import (
 )
 
 type PetService interface {
-	RegisterPet(ctx context.Context, uid string, petName string, files []*multipart.FileHeader, ageGroup string, gender string, petType string, breed string, color string, personality []string, specialCare string, sterilized bool, vaccination []string, address string, addressLat float64, addressLong float64, status bool, note string) (pid int, err error)
+	RegisterPet(ctx context.Context, uid string, petName string, files []*multipart.FileHeader, ageGroup string, gender string, petType string, breed string, color string, personality []string, specialCare string, sterilized bool, vaccination []string, address string, addressLat float64, addressLong float64, status string, note string) (pid int, err error)
 	SearchPets(ctx context.Context, uid string, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, petLocation string, userLat float64, userLong float64) (petData []domain.PetsInfo, totalCount int, err error)
 	PetInfo(ctx context.Context, pid int) (petData *domain.PetInfo, err error)
 	AdoptPet(ctx context.Context, uid string, pid int, q1_1 bool, q1_2 bool, q1_3 string, q2_1 string, q2_2 bool, q2_3 bool, q3_1 int8, q3_2 bool, q3_3 string, q4_1 int8, q5_1 int8, q6_1 int8, q6_2 int8, note string) (rid int, err error)
@@ -40,7 +40,7 @@ func NewPetService(mysqlRepo port.PetSQLRepository, mongoRepo port.PetMongoRepos
 	}
 }
 
-func (s *PetServiceImpl) RegisterPet(ctx context.Context, uid string, petName string, files []*multipart.FileHeader, ageGroup string, gender string, petType string, breed string, color string, personality []string, specialCare string, sterilized bool, vaccination []string, address string, addressLat float64, addressLong float64, status bool, note string) (pid int, err error) {
+func (s *PetServiceImpl) RegisterPet(ctx context.Context, uid string, petName string, files []*multipart.FileHeader, ageGroup string, gender string, petType string, breed string, color string, personality []string, specialCare string, sterilized bool, vaccination []string, address string, addressLat float64, addressLong float64, status string, note string) (pid int, err error) {
 	urls, err := s.uploader.UploadImages(files, "pets")
 	if err != nil {
 		return -1, err
@@ -56,7 +56,12 @@ func (s *PetServiceImpl) RegisterPet(ctx context.Context, uid string, petName st
 		return -1, err
 	}
 
-	pid, err = s.mysqlRepo.CreatePet(uid, petName, imageJSON, ageGroup, gender, petType, breed, color, personalityJSON, specialCare, sterilized, vaccination, address, addressLat, addressLong, status, note)
+	specialCareJSON, err := json.Marshal(specialCare)
+	if err != nil {
+		return -1, err
+	}
+
+	pid, err = s.mysqlRepo.CreatePet(uid, petName, imageJSON, ageGroup, gender, petType, breed, color, personalityJSON, specialCareJSON, sterilized, vaccination, address, addressLat, addressLong, "AVALIABLE", note)
 	if err != nil {
 		return -1, err
 	}
@@ -139,6 +144,17 @@ func (s *PetServiceImpl) PetInfo(ctx context.Context, pid int) (petData *domain.
 	if err != nil {
 		return nil, err
 	}
+
+	// pet_detail isn't a MySQL column — the write-up text lives in Mongo's
+	// per-breed personality field, keyed by breedName against Pets.pet_breed.
+	// A lookup failure here shouldn't fail the whole request, same reasoning
+	// as applyUserDefaults: missing enrichment data isn't worth a 500.
+	// GetBreedBehavior's collection lookup only recognizes lowercase
+	// "dog"/"cat", but pet_type is stored as "DOG"/"CAT".
+	if detail, err := s.mongoRepo.GetBreedBehavior(strings.ToLower(data.PetType), data.PetBreed); err == nil {
+		data.PetDetail = detail
+	}
+
 	return &data, nil
 }
 
