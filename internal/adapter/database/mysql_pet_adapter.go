@@ -27,13 +27,13 @@ func (m *MySQLPetAdapter) CreatePet(
 	breed string,
 	color string,
 	personality json.RawMessage,
-	specialCare string,
+	specialCare json.RawMessage,
 	sterilized bool,
 	vaccination []string,
 	address string,
 	addressLat float64,
 	addressLong float64,
-	status bool,
+	status string,
 	note string,
 ) (pid int, err error) {
 	vaccineTypesStr := strings.Join(vaccination, ",")
@@ -81,7 +81,7 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 
 	hasLocation := userLat != 0 || userLong != 0
 
-	conditions := []string{"pet_status = 'AVAILABLE'"}
+	conditions := []string{"pet_status = 'AVALIABLE'"}
 	var filterArgs []any
 
 	if petAgeGroup != "" {
@@ -119,10 +119,10 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 	if err != nil {
 		return nil, 0, err
 	}
-
+	
 	var query string
 	var args []any
-
+	
 	if hasLocation {
 		query = `
 		SELECT pet_id, pet_name, pet_imageAddress, pet_ageGroup,
@@ -154,9 +154,9 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 	query += whereClause
 
 	if hasLocation {
-		query += " ORDER BY distance ASC, pet_createdAt DESC"
+		query += " ORDER BY distance ASC, pet_createAt DESC"
 	} else {
-		query += " ORDER BY pet_createdAt DESC"
+		query += " ORDER BY pet_createAt DESC"
 	}
 
 	query += " LIMIT ? OFFSET ?"
@@ -214,8 +214,8 @@ func (m *MySQLPetAdapter) GetPetsSuggestion() (petData []domain.PetsInfo, err er
 		SELECT pet_id, pet_name, pet_imageAddress, pet_ageGroup, pet_gender,
 		       pet_type, pet_breed, pet_color, pet_address, pet_addressLat, pet_addressLong
 		FROM Pets
-		WHERE pet_status = 'AVAILABLE' AND pet_type = ?
-		ORDER BY pet_createdAt DESC
+		WHERE pet_status = 'AVALIABLE' AND pet_type = ?
+		ORDER BY pet_createAt DESC
 		LIMIT 8
 	`
 
@@ -274,18 +274,18 @@ func (m *MySQLPetAdapter) GetPetInfo(pid int) (domain.PetInfo, error) {
 	var imageAddressRaw []byte
 	var personalityRaw []byte
 	var vacinationRaw []byte
+	var specialCareRaw []byte
 
 	err := m.mysql_db.QueryRow(`
-		SELECT pet_id, pet_name, pet_detail, pet_imageAddress, pet_ageGroup,
+		SELECT pet_id, pet_name, pet_imageAddress, pet_ageGroup,
 		       pet_gender, pet_type, pet_breed, pet_color,
 		       pet_sterilized, pet_vaccination, pet_address, pet_addressLat,
-		       pet_addressLong, pet_status, pet_note, pet_personality
+		       pet_addressLong, pet_status, pet_note, pet_personality, pet_specialCare
 		FROM Pets
 		WHERE pet_id = ?
 	`, pid).Scan(
 		&pet.Pid,
 		&pet.PetName,
-		&pet.PetDetail,
 		&imageAddressRaw,
 		&pet.PetAgeGroup,
 		&pet.PetGender,
@@ -300,15 +300,15 @@ func (m *MySQLPetAdapter) GetPetInfo(pid int) (domain.PetInfo, error) {
 		&pet.Status,
 		&pet.Note,
 		&personalityRaw,
+		&specialCareRaw,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.PetInfo{}, errors.New("pet not found")
 		}
 		return domain.PetInfo{}, errors.New("fail to get pet info")
 	}
-
+	
 	if len(imageAddressRaw) > 0 {
 		if err := json.Unmarshal(imageAddressRaw, &pet.PetImageAddress); err != nil {
 			return domain.PetInfo{}, errors.New("fail to parse pet image address")
@@ -319,9 +319,15 @@ func (m *MySQLPetAdapter) GetPetInfo(pid int) (domain.PetInfo, error) {
 			return domain.PetInfo{}, errors.New("fail to parse pet personality")
 		}
 	}
-	if len(vacinationRaw) > 0 {
-		if err := json.Unmarshal(vacinationRaw, &pet.PetVaccination); err != nil {
-			return domain.PetInfo{}, errors.New("fail to parse pet vaccine types")
+	// pet_vaccination is a MySQL SET column, not JSON — it comes back as a
+	// plain comma-separated string (e.g. "DHPPi,Rabies"), matching how
+	// CreatePet writes it via strings.Join(vaccination, ",").
+	if raw := strings.TrimSpace(string(vacinationRaw)); raw != "" {
+		pet.PetVaccination = strings.Split(raw, ",")
+	}
+	if len(specialCareRaw) > 0 {
+		if err := json.Unmarshal(specialCareRaw, &pet.PetSpecialCare); err != nil {
+			return domain.PetInfo{}, errors.New("fail to parse pet special care")
 		}
 	}
 
@@ -350,7 +356,7 @@ func (m *MySQLPetAdapter) PostPetAdopt(
 	var petId int
 	err = tx.QueryRow(`
 		SELECT pet_id FROM Pets
-		WHERE pet_id = ? AND pet_status = 'AVAILABLE'
+		WHERE pet_id = ? AND pet_status = 'AVALIABLE'
 		FOR UPDATE
 	`, pid).Scan(&petId)
 	if err != nil {
@@ -403,7 +409,7 @@ func (m *MySQLPetAdapter) UpdatePetAdopter(rid int) (err error) {
 		UPDATE Pets_Rehoming pr
 		JOIN Pets p ON pr.rehome_petId = p.pet_id
 		SET pr.rehome_status = 'ACCEPT', p.pet_status = 'ADOPTED'
-		WHERE pr.rehome_id = ? AND pr.rehome_status = 'PENDING' AND p.pet_status = 'AVAILABLE'
+		WHERE pr.rehome_id = ? AND pr.rehome_status = 'PENDING' AND p.pet_status = 'AVALIABLE'
 	`, rid)
 	if execErr != nil {
 		err = execErr
