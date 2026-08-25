@@ -66,9 +66,10 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 	petType string,
 	petBreed string,
 	petColor string,
+	petLocation string,
 	userLat float64,
 	userLong float64,
-) ([]domain.PetsInfo, error) {
+) (petData []domain.PetsInfo, totalCount int, err error) {
 
 	if page <= 0 {
 		page = 1
@@ -79,6 +80,45 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 	offset := (page - 1) * pageSize
 
 	hasLocation := userLat != 0 || userLong != 0
+
+	conditions := []string{"pet_status = 'AVAILABLE'"}
+	var filterArgs []any
+
+	if petAgeGroup != "" {
+		conditions = append(conditions, "pet_ageGroup = ?")
+		filterArgs = append(filterArgs, petAgeGroup)
+	}
+	if petGender != "" {
+		conditions = append(conditions, "pet_gender = ?")
+		filterArgs = append(filterArgs, petGender)
+	}
+	if petType != "" {
+		conditions = append(conditions, "pet_type = ?")
+		filterArgs = append(filterArgs, petType)
+	}
+	if petBreed != "" {
+		conditions = append(conditions, "pet_breed = ?")
+		filterArgs = append(filterArgs, petBreed)
+	}
+	if petColor != "" {
+		conditions = append(conditions, "pet_color = ?")
+		filterArgs = append(filterArgs, petColor)
+	}
+	if petLocation != "" {
+		// pet_address is freeform text built as "street, subDistrict, district,
+		// province" (see the frontend's joinAddress/resolveLocation) rather than
+		// a location enum, so this is a substring match against the province
+		// name rather than an exact-match column.
+		conditions = append(conditions, "pet_address LIKE ?")
+		filterArgs = append(filterArgs, "%"+petLocation+"%")
+	}
+
+	whereClause := " WHERE " + strings.Join(conditions, " AND ")
+
+	err = m.mysql_db.QueryRow("SELECT COUNT(*) FROM Pets"+whereClause, filterArgs...).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	var query string
 	var args []any
@@ -99,7 +139,7 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 		       ) AS distance
 		FROM Pets
 		`
-		args = []any{userLat, userLong, userLat}
+		args = append([]any{userLat, userLong, userLat}, filterArgs...)
 	} else {
 		query = `
 		SELECT pet_id, pet_name, pet_imageAddress, pet_ageGroup,
@@ -108,33 +148,10 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 		       0 AS distance
 		FROM Pets
 		`
-		args = []any{}
+		args = append([]any{}, filterArgs...)
 	}
 
-	conditions := []string{"pet_status = 'AVAILABLE'"}
-
-	if petAgeGroup != "" {
-		conditions = append(conditions, "pet_ageGroup = ?")
-		args = append(args, petAgeGroup)
-	}
-	if petGender != "" {
-		conditions = append(conditions, "pet_gender = ?")
-		args = append(args, petGender)
-	}
-	if petType != "" {
-		conditions = append(conditions, "pet_type = ?")
-		args = append(args, petType)
-	}
-	if petBreed != "" {
-		conditions = append(conditions, "pet_breed = ?")
-		args = append(args, petBreed)
-	}
-	if petColor != "" {
-		conditions = append(conditions, "pet_color = ?")
-		args = append(args, petColor)
-	}
-
-	query += " WHERE " + strings.Join(conditions, " AND ")
+	query += whereClause
 
 	if hasLocation {
 		query += " ORDER BY distance ASC, pet_createdAt DESC"
@@ -147,7 +164,7 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 
 	rows, err := m.mysql_db.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -173,12 +190,12 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 			&distance,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		if len(imageAddressRaw) > 0 {
 			if err := json.Unmarshal(imageAddressRaw, &pet.PetImageAddress); err != nil {
-				return nil, errors.New("fail to parse pet image address")
+				return nil, 0, errors.New("fail to parse pet image address")
 			}
 		}
 
@@ -186,10 +203,10 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return pets, nil
+	return pets, totalCount, nil
 }
 
 func (m *MySQLPetAdapter) GetPetsSuggestion() (petData []domain.PetsInfo, err error) {

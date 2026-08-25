@@ -22,5 +22,6 @@ func UserRouter(app *fiber.App, userHandler *user.HttpUserHandler) {
 	authUser.Put("/status", userHandler.UpdateNewUserStatus)
 	authUser.Delete("/delete", userHandler.DeleteUser)
 	authUser.Put("/update", userHandler.UpdateUser)
+	authUser.Put("/image", userHandler.UpdateUserImage)
 	authUser.Get("/info", userHandler.UserInfo)
 }

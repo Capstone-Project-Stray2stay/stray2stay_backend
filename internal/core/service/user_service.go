@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"log"
+	"mime/multipart"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 	"github.com/S-nudhana/stray2stay/internal/core/port"
@@ -13,6 +15,7 @@ type UserService interface {
 	Register(ctx context.Context, email string, password string, firstName string, lastName string) (err error)
 	DeleteUser(ctx context.Context, uid string) (err error)
 	UpdateUser(ctx context.Context, uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64, dogBreed string, dogColor string, dogAgeGroup string, dogGender string, catBreed string, catColor string, catAgeGroup string, catGender string) (err error)
+	UpdateUserImage(ctx context.Context, uid string, file *multipart.FileHeader) (imageURL string, err error)
 	UserInfo(ctx context.Context, uid string) (userData *domain.UserInfo, err error)
 	NewUserStatus(ctx context.Context, uid string) (userStatus bool, err error)
 	UpdateNewUserStatus(ctx context.Context, uid string) (userStatus bool, err error)
@@ -65,6 +68,34 @@ func (s *UserServiceImpl) UpdateUser(ctx context.Context, uid string, firstName 
 		return err
 	}
 	return nil
+}
+
+func (s *UserServiceImpl) UpdateUserImage(ctx context.Context, uid string, file *multipart.FileHeader) (imageURL string, err error) {
+	oldImageURL, err := s.userRepo.GetUserImage(uid)
+	if err != nil {
+		return "", err
+	}
+
+	urls, err := s.uploader.UploadImages([]*multipart.FileHeader{file}, "users")
+	if err != nil {
+		return "", err
+	}
+
+	imageURL = urls[0]
+	err = s.userRepo.UpdateUserImage(uid, imageURL)
+	if err != nil {
+		return "", err
+	}
+
+	// Best-effort: the profile image is already switched over in the DB, so a
+	// stale asset left behind in Cloudinary shouldn't fail the request.
+	if oldImageURL != nil && *oldImageURL != "" {
+		if err := s.uploader.DeleteImage(*oldImageURL); err != nil {
+			log.Printf("[UpdateUserImage] failed to delete old image %q: %v", *oldImageURL, err)
+		}
+	}
+
+	return imageURL, nil
 }
 
 func (s *UserServiceImpl) UserInfo(ctx context.Context, uid string) (userData *domain.UserInfo, err error) {

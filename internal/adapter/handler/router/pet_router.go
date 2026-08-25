@@ -15,7 +15,7 @@ func PetRouter(app *fiber.App, petHandler *pet.HttpPetHandler) {
 	pet.Get("/breed/color", petHandler.PetColors)
 	pet.Get("/breed/behavior", petHandler.PetBehavior)
 	pet.Get("/:pid", petHandler.PetInfo)
-	pet.Get("", petHandler.PetSearchFilter)
+	pet.Get("", middleware.OptionalAuth, petHandler.PetSearchFilter)
 	pet.Post("/ai/classify", petHandler.AIClassify)
 
 	authPet := pet.Group("", middleware.AuthRequired)
