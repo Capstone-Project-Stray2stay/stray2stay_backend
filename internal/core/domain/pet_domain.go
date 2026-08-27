@@ -30,6 +30,9 @@ type PetGetInfoByIdRequest struct {
 	Pid int `json:"petId" validate:"required,gt=0"`
 }
 type PetInfo struct {
+	// Not serialized — only used server-side (see the PetInfo handler) to
+	// compute whether the requesting caller owns this pet.
+	PetOwnerID      string          `json:"-"`
 	Pid             int             `json:"pid"`
 	PetName         string          `json:"petName"`
 	PetDetail       string          `json:"petDetail"`
@@ -52,6 +55,10 @@ type PetInfo struct {
 
 type PetGetInfoByIdResponse struct {
 	PetInfo any    `json:"petInfo"`
+	Message string `json:"message"`
+}
+
+type PetDeleteResponse struct {
 	Message string `json:"message"`
 }
 

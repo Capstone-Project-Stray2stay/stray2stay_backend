@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"mime/multipart"
 	"strings"
 
@@ -22,6 +23,7 @@ type PetService interface {
 	PetBehavior(ctx context.Context, petType string, petBreed string) (behaviorData string, err error)
 	ScreeningAnswerAdoptor(ctx context.Context, screeningAnswerAdoptorPayload *domain.ScreeningAnswerAdoptorRequest) (answer domain.ScreeningAnswer, err error)
 	AllAdoptors(ctx context.Context, uid string) (adoptors []domain.PetAdoptorsInfo, err error)
+	DeletePet(ctx context.Context, uid string, pid int) (err error)
 }
 
 type PetServiceImpl struct {
@@ -220,4 +222,22 @@ func (s *PetServiceImpl) AllAdoptors(ctx context.Context, uid string) (adoptors 
 		return nil, err
 	}
 	return adoptors, nil
+}
+
+func (s *PetServiceImpl) DeletePet(ctx context.Context, uid string, pid int) (err error) {
+	imageAddresses, err := s.mysqlRepo.DeletePet(uid, pid)
+	if err != nil {
+		return err
+	}
+
+	// Best-effort: the pet row is already gone, so a stray Cloudinary asset
+	// shouldn't fail the request — same reasoning as UpdateUserImage's old
+	// image cleanup.
+	for _, imageURL := range imageAddresses {
+		if deleteErr := s.uploader.DeleteImage(imageURL); deleteErr != nil {
+			log.Printf("[DeletePet] failed to delete image %q for pet %d: %v", imageURL, pid, deleteErr)
+		}
+	}
+
+	return nil
 }

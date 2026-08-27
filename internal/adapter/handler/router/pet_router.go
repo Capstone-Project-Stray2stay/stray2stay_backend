@@ -14,7 +14,7 @@ func PetRouter(app *fiber.App, petHandler *pet.HttpPetHandler) {
 	pet.Get("/breeds", petHandler.PetBreeds)
 	pet.Get("/breed/color", petHandler.PetColors)
 	pet.Get("/breed/behavior", petHandler.PetBehavior)
-	pet.Get("/:pid", petHandler.PetInfo)
+	pet.Get("/:pid", middleware.OptionalAuth, petHandler.PetInfo)
 	pet.Get("", middleware.OptionalAuth, petHandler.PetSearchFilter)
 	pet.Post("/ai/classify", petHandler.AIClassify)
 
@@ -26,4 +26,5 @@ func PetRouter(app *fiber.App, petHandler *pet.HttpPetHandler) {
 	authPet.Post("/:pid/select-adopter", petHandler.SelectAdopter)
 	authPet.Post("/:pid/adopt", petHandler.Adopt)
 	authPet.Post("", petHandler.Register)
+	authPet.Delete("/:pid", petHandler.DeletePet)
 }

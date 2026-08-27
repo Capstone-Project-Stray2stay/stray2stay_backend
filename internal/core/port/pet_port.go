@@ -15,6 +15,7 @@ type PetSQLRepository interface {
 	GetPetsSuggestion() (petData []domain.PetsInfo, err error)
 	GetScreeningAnswer(rid int) (answer domain.ScreeningAnswer, err error)
 	GetAllAdoptors(uid string) (adoptors []domain.PetAdoptorsInfo, err error)
+	DeletePet(uid string, pid int) (imageAddresses []string, err error)
 }
 type PetMongoRepository interface {
 	GetBreeds(petType string) (breedData []string, err error)

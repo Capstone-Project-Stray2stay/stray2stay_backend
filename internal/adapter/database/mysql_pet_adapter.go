@@ -277,7 +277,7 @@ func (m *MySQLPetAdapter) GetPetInfo(pid int) (domain.PetInfo, error) {
 	var specialCareRaw []byte
 
 	err := m.mysql_db.QueryRow(`
-		SELECT pet_id, pet_name, pet_imageAddress, pet_ageGroup,
+		SELECT pet_id, pet_ownerId, pet_name, pet_imageAddress, pet_ageGroup,
 		       pet_gender, pet_type, pet_breed, pet_color,
 		       pet_sterilized, pet_vaccination, pet_address, pet_addressLat,
 		       pet_addressLong, pet_status, pet_note, pet_personality, pet_specialCare
@@ -285,6 +285,7 @@ func (m *MySQLPetAdapter) GetPetInfo(pid int) (domain.PetInfo, error) {
 		WHERE pet_id = ?
 	`, pid).Scan(
 		&pet.Pid,
+		&pet.PetOwnerID,
 		&pet.PetName,
 		&imageAddressRaw,
 		&pet.PetAgeGroup,
@@ -488,7 +489,7 @@ func (m *MySQLPetAdapter) GetAllAdoptors(uid string) (adoptors []domain.PetAdopt
 		FROM Pets_Rehoming pr
 		JOIN Pets p ON pr.rehome_petId = p.pet_id
 		JOIN Users u ON pr.rehome_adoptorId = u.user_id
-		WHERE p.pet_ownerId = ?
+		WHERE SUBSTRING_INDEX(p.pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
 	`, uid)
 	if err != nil {
 		return nil, err
@@ -532,4 +533,66 @@ func (m *MySQLPetAdapter) GetAllAdoptors(uid string) (adoptors []domain.PetAdopt
 	}
 
 	return adoptors, nil
+}
+
+// DeletePet removes a pet row, but only when uid is its owner, and hands back
+// the image URLs that were on it so the caller can clean those up in
+// Cloudinary (this adapter has no uploader dependency to do that itself).
+func (m *MySQLPetAdapter) DeletePet(uid string, pid int) (imageAddresses []string, err error) {
+	tx, err := m.mysql_db.Begin()
+	if err != nil {
+		return nil, errors.New("fail to delete pet")
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// OAuth-registered accounts store user_id (and thus pet_ownerId) as
+	// "<uuid>:OAUTH", but the JWT's uid claim carries the bare uuid — compare
+	// on the part before the colon so OAuth owners can manage their own pets.
+	var imageAddressRaw []byte
+	err = tx.QueryRow(`
+		SELECT pet_imageAddress FROM Pets
+		WHERE pet_id = ? AND SUBSTRING_INDEX(pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
+		FOR UPDATE
+	`, pid, uid).Scan(&imageAddressRaw)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("pet not found or not owned by user")
+		}
+		return nil, errors.New("fail to delete pet")
+	}
+
+	result, execErr := tx.Exec(`
+		DELETE FROM Pets
+		WHERE pet_id = ? AND SUBSTRING_INDEX(pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
+	`, pid, uid)
+	if execErr != nil {
+		err = execErr
+		return nil, errors.New("fail to delete pet")
+	}
+
+	rowsAffected, raErr := result.RowsAffected()
+	if raErr != nil {
+		err = raErr
+		return nil, errors.New("fail to delete pet")
+	}
+	if rowsAffected == 0 {
+		err = errors.New("pet not found or not owned by user")
+		return nil, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, errors.New("fail to delete pet")
+	}
+
+	if len(imageAddressRaw) > 0 {
+		if unmarshalErr := json.Unmarshal(imageAddressRaw, &imageAddresses); unmarshalErr != nil {
+			return nil, errors.New("fail to parse pet image address")
+		}
+	}
+
+	return imageAddresses, nil
 }
