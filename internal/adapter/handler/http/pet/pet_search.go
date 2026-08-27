@@ -3,11 +3,23 @@ package pet
 import (
 	"context"
 	"math"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
+
+// baseUserID strips the ":<provider>" suffix OAuth accounts store on
+// user_id/pet_ownerId (see MySQLUserAdapter.OAuthAuthenticateUser), so
+// comparing a pet's owner against the JWT's uid claim works regardless of
+// which side carries the suffix.
+func baseUserID(uid string) string {
+	if i := strings.IndexByte(uid, ':'); i != -1 {
+		return uid[:i]
+	}
+	return uid
+}
 
 // PetsInfo godoc
 // @Summary Get all pets
@@ -69,6 +81,10 @@ func (h *HttpPetHandler) PetSearchFilter(c *fiber.Ctx) error {
 // @Success 200 {object} domain.PetGetInfoByIdResponse
 // @Router /api/pet/{pid} [get]
 func (h *HttpPetHandler) PetInfo(c *fiber.Ctx) error {
+	// Set by middleware.OptionalAuth only when a valid session is present —
+	// this route is public, so anonymous callers just get isOwner: false.
+	uid, _ := c.Locals("uid").(string)
+
 	petGetInfoByIdPayload := new(domain.PetGetInfoByIdRequest)
 	if err := c.ParamsParser(petGetInfoByIdPayload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -89,9 +105,47 @@ func (h *HttpPetHandler) PetInfo(c *fiber.Ctx) error {
 		})
 	}
 
+	isOwner := uid != "" && petData != nil && baseUserID(petData.PetOwnerID) == baseUserID(uid)
+
 	return c.JSON(fiber.Map{
 		"petsInfo": petData,
+		"isOwner":  isOwner,
 		"message":  "Get pet data successfully",
+	})
+}
+
+// DeletePet godoc
+// @Summary Delete pet
+// @Description Delete the authenticated user's own pet listing, including its uploaded images
+// @Tags pets
+// @Produce json
+// @Param pid path string true "Pet ID"
+// @Success 200 {object} domain.PetDeleteResponse
+// @Router /api/pets/{pid} [delete]
+func (h *HttpPetHandler) DeletePet(c *fiber.Ctx) error {
+	uid := c.Locals("uid").(string)
+
+	petGetInfoByIdPayload := new(domain.PetGetInfoByIdRequest)
+	if err := c.ParamsParser(petGetInfoByIdPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request payload",
+		})
+	}
+
+	if err := h.validate.Struct(petGetInfoByIdPayload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Incorrect request format",
+		})
+	}
+
+	if err := h.service.DeletePet(context.Background(), uid, petGetInfoByIdPayload.Pid); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Pet deleted successfully",
 	})
 }
 
