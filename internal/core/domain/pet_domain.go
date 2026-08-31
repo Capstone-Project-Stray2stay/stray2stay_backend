@@ -100,21 +100,30 @@ type PetsInfo struct {
 	PetAddressLong  float64  `json:"petAddressLong"`
 }
 
+// PetAdoptRequest is one filled-in screening questionnaire.
+//
+// The numeric answers are 0-based indexes into their option lists, and the
+// yes/no ones are legitimately false, so neither can carry `required` — the
+// validator counts a zero value as absent and would reject every "No" and
+// every first option. They are bounded with min/max instead, which is what the
+// old (never enforced) `range` tags were reaching for. Bounds follow
+// SCREENING_SECTIONS in the frontend's screeningForm.ts.
 type PetAdoptRequest struct {
 	Pid  int    `json:"pid" validate:"required,gt=0"`
-	Q1_1 bool   `json:"q1_1" validate:"required"`
-	Q1_2 bool   `json:"q1_2" validate:"required"`
+	Q1_1 bool   `json:"q1_1"`
+	Q1_2 bool   `json:"q1_2"`
 	Q1_3 string `json:"q1_3" validate:"required"`
 	Q2_1 string `json:"q2_1" validate:"required"`
-	Q2_2 bool   `json:"q2_2" validate:"required"`
-	Q2_3 bool   `json:"q2_3" validate:"required"`
-	Q3_1 int8   `json:"q3_1" validate:"required"`
-	Q3_2 bool   `json:"q3_2" validate:"required"`
+	Q2_2 bool   `json:"q2_2"`
+	Q2_3 bool   `json:"q2_3"`
+	// Hours per day the pet would be left alone.
+	Q3_1 int8   `json:"q3_1" validate:"min=0,max=24"`
+	Q3_2 bool   `json:"q3_2"`
 	Q3_3 string `json:"q3_3" validate:"required"`
-	Q4_1 int8   `json:"q4_1" validate:"required" range:"0,3"`
-	Q5_1 int8   `json:"q5_1" validate:"required" range:"0,3"`
-	Q6_1 int8   `json:"q6_1" validate:"required" range:"0,3"`
-	Q6_2 int8   `json:"q6_2" validate:"required" range:"0,3"`
+	Q4_1 int8   `json:"q4_1" validate:"min=0,max=2"`
+	Q5_1 int8   `json:"q5_1" validate:"min=0,max=3"`
+	Q6_1 int8   `json:"q6_1" validate:"min=0,max=4"`
+	Q6_2 int8   `json:"q6_2" validate:"min=0,max=4"`
 	Note string `json:"note"`
 }
 
