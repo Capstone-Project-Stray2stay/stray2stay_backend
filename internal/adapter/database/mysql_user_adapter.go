@@ -220,9 +220,9 @@ func (m *MySQLUserAdapter) GetUserInfo(uid string) (userInfo *domain.UserInfo, e
 	var user domain.UserInfo
 	
 	err = m.db.QueryRow(
-		"SELECT user_firstname, user_lastname, user_phoneNumber, user_address, user_imageAddress FROM Users WHERE user_id = ?",
+		"SELECT user_firstname, user_lastname, user_phoneNumber, user_address, user_addressLat, user_addressLong, user_imageAddress FROM Users WHERE user_id = ?",
 		uid,
-	).Scan(&user.Firstname, &user.Lastname, &user.Phone, &user.Address, &user.CoverImage)
+	).Scan(&user.Firstname, &user.Lastname, &user.Phone, &user.Address, &user.AddressLat, &user.AddressLong, &user.CoverImage)
 	if err != nil {
 		return nil, errors.New("failed to get user info")
 	}

@@ -37,8 +37,11 @@ func (h *HttpPetHandler) Adopt(c *fiber.Ctx) error {
 
 	rid, err := h.service.AdoptPet(c.Context(), uid, petAdoptPayload.Pid, petAdoptPayload.Q1_1, petAdoptPayload.Q1_2, petAdoptPayload.Q1_3, petAdoptPayload.Q2_1, petAdoptPayload.Q2_2, petAdoptPayload.Q2_3, petAdoptPayload.Q3_1, petAdoptPayload.Q3_2, petAdoptPayload.Q3_3, petAdoptPayload.Q4_1, petAdoptPayload.Q5_1, petAdoptPayload.Q6_1, petAdoptPayload.Q6_2, petAdoptPayload.Note)
 	if err != nil {
+		// Surfaced verbatim rather than a generic message: this is where
+		// "pet not available for adoption" and "you already have a pending
+		// request for this pet" reach the adopter.
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to adopt pet",
+			"error": err.Error(),
 		})
 	}
 
@@ -59,6 +62,8 @@ func (h *HttpPetHandler) Adopt(c *fiber.Ctx) error {
 // @Failure 500 {object} domain.ErrorResponse
 // @Router /api/pet/adopt/select [patch]
 func (h *HttpPetHandler) SelectAdopter(c *fiber.Ctx) error {
+	uid := c.Locals("uid").(string)
+
 	petSelectAdopterPayload := new(domain.PetSelectAdopterRequest)
 	if err := c.BodyParser(petSelectAdopterPayload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -72,7 +77,7 @@ func (h *HttpPetHandler) SelectAdopter(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.service.SelectPetAdopter(c.Context(), petSelectAdopterPayload.Rid); err != nil {
+	if err := h.service.SelectPetAdopter(c.Context(), petSelectAdopterPayload.Rid, uid); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to select adopter",
 		})
@@ -84,8 +89,10 @@ func (h *HttpPetHandler) SelectAdopter(c *fiber.Ctx) error {
 }
 
 func (h *HttpPetHandler) ScreeningAnswerAdoptor(c *fiber.Ctx) error {
+	uid := c.Locals("uid").(string)
+
 	screeningAnswerAdoptorPayload := new(domain.ScreeningAnswerAdoptorRequest)
-	if err := c.BodyParser(screeningAnswerAdoptorPayload); err != nil {
+	if err := c.QueryParser(screeningAnswerAdoptorPayload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request payload",
 		})
@@ -98,7 +105,7 @@ func (h *HttpPetHandler) ScreeningAnswerAdoptor(c *fiber.Ctx) error {
 	}
 
 	// Call the service method to handle the screening answers
-	screeningAnswer, err := h.service.ScreeningAnswerAdoptor(c.Context(), screeningAnswerAdoptorPayload);
+	screeningAnswer, err := h.service.ScreeningAnswerAdoptor(c.Context(), screeningAnswerAdoptorPayload, uid);
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to query screening answers",
@@ -112,20 +119,9 @@ func (h *HttpPetHandler) ScreeningAnswerAdoptor(c *fiber.Ctx) error {
 }
 
 func (h *HttpPetHandler) AllAdoptors(c *fiber.Ctx) error {
-	allAdoptorsPayload := new(domain.AllAdoptorsRequest)
-	if err := c.QueryParser(allAdoptorsPayload); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request payload",
-		})
-	}
+	uid := c.Locals("uid").(string)
 
-	if err := h.validate.Struct(allAdoptorsPayload); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Incorrect request format",
-		})
-	}
-
-	adoptors, err := h.service.AllAdoptors(c.Context(), allAdoptorsPayload.UserID)
+	adoptors, err := h.service.AllAdoptors(c.Context(), uid)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to retrieve adoptors",
@@ -135,5 +131,61 @@ func (h *HttpPetHandler) AllAdoptors(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":  "Retrieved adoptors successfully",
 		"adoptors": adoptors,
+	})
+}
+
+// MyAdoptionRequests godoc
+// @Summary List the authenticated user's own adoption requests
+// @Description Every request the caller has made as an adoptor, newest first — backs the Profile page's "My Adoptions" list
+// @Tags pets
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} domain.PetMyAdoptionRequestsResponse
+// @Failure 500 {object} domain.ErrorResponse
+// @Router /api/pets/mine/adoptions [get]
+func (h *HttpPetHandler) MyAdoptionRequests(c *fiber.Ctx) error {
+	uid := c.Locals("uid").(string)
+
+	requests, err := h.service.MyAdoptionRequests(c.Context(), uid)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to retrieve your adoption requests",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":          "Retrieved your adoption requests successfully",
+		"adoptionRequests": requests,
+	})
+}
+
+// CancelAdoptionRequest godoc
+// @Summary Withdraw a pending adoption request
+// @Description Deletes the caller's own request, only while it's still PENDING
+// @Tags pets
+// @Produce json
+// @Security BearerAuth
+// @Param rid path string true "Adoption request ID"
+// @Success 200 {object} domain.PetCancelAdoptionResponse
+// @Failure 500 {object} domain.ErrorResponse
+// @Router /api/pets/mine/adoptions/{rid} [delete]
+func (h *HttpPetHandler) CancelAdoptionRequest(c *fiber.Ctx) error {
+	uid := c.Locals("uid").(string)
+
+	rid, err := c.ParamsInt("rid")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request id",
+		})
+	}
+
+	if err := h.service.CancelAdoptionRequest(c.Context(), uid, rid); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Adoption request cancelled successfully",
 	})
 }

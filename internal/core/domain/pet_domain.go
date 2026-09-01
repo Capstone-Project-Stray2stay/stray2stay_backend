@@ -26,6 +26,30 @@ type PetRegisterResponse struct {
 	Message string `json:"message"`
 }
 
+type PetUpdateRequest struct {
+	PetName        string   `form:"petName" validate:"required"`
+	PetAgeGroup    string   `form:"petAgeGroup" validate:"required"`
+	PetGender      string   `form:"petGender" validate:"required"`
+	PetType        string   `form:"petType" validate:"required"`
+	PetBreed       string   `form:"petBreed" validate:"required"`
+	PetColor       string   `form:"petColor" validate:"required"`
+	PetPersonality []string `form:"petPersonality" validate:"required,min=1"`
+	PetSpecialCare string   `form:"petSpecialCare"`
+	PetSterilized  bool     `form:"petSterilized"`
+	PetVaccination []string `form:"petVaccination" validate:"required,min=1,dive,oneof=DHPPi Rabies FVRCP"`
+	PetAddress     string   `form:"petAddress" validate:"required"`
+	PetAddressLat  float64  `form:"petAddressLat" validate:"required"`
+	PetAddressLong float64  `form:"petAddressLong" validate:"required"`
+	// URLs of the pet's already-uploaded photos that should be kept — anything
+	// on the pet today but missing from this list gets deleted from Cloudinary.
+	ExistingImages []string `form:"existingImages"`
+	Note           string   `form:"note"`
+}
+
+type PetUpdateResponse struct {
+	Message string `json:"message"`
+}
+
 type PetGetInfoByIdRequest struct {
 	Pid int `json:"petId" validate:"required,gt=0"`
 }
@@ -101,20 +125,24 @@ type PetsInfo struct {
 }
 
 type PetAdoptRequest struct {
-	Pid  int    `json:"pid" validate:"required,gt=0"`
-	Q1_1 bool   `json:"q1_1" validate:"required"`
-	Q1_2 bool   `json:"q1_2" validate:"required"`
+	Pid int `json:"pid" validate:"required,gt=0"`
+	// Booleans and choice-indexes below deliberately skip `required`: its zero
+	// value (false / 0) is a legitimate answer here (a "No", or a form's first
+	// option) — `required` would wrongly reject those as if left blank.
+	Q1_1 bool   `json:"q1_1"`
+	Q1_2 bool   `json:"q1_2"`
 	Q1_3 string `json:"q1_3" validate:"required"`
 	Q2_1 string `json:"q2_1" validate:"required"`
-	Q2_2 bool   `json:"q2_2" validate:"required"`
-	Q2_3 bool   `json:"q2_3" validate:"required"`
-	Q3_1 int8   `json:"q3_1" validate:"required"`
-	Q3_2 bool   `json:"q3_2" validate:"required"`
+	Q2_2 bool   `json:"q2_2"`
+	Q2_3 bool   `json:"q2_3"`
+	Q3_1 int8   `json:"q3_1" validate:"gte=0"`
+	Q3_2 bool   `json:"q3_2"`
 	Q3_3 string `json:"q3_3" validate:"required"`
-	Q4_1 int8   `json:"q4_1" validate:"required" range:"0,3"`
-	Q5_1 int8   `json:"q5_1" validate:"required" range:"0,3"`
-	Q6_1 int8   `json:"q6_1" validate:"required" range:"0,3"`
-	Q6_2 int8   `json:"q6_2" validate:"required" range:"0,3"`
+	// Bounds match each question's actual option count (3/4/5/5 options).
+	Q4_1 int8   `json:"q4_1" validate:"gte=0,lte=2"`
+	Q5_1 int8   `json:"q5_1" validate:"gte=0,lte=3"`
+	Q6_1 int8   `json:"q6_1" validate:"gte=0,lte=4"`
+	Q6_2 int8   `json:"q6_2" validate:"gte=0,lte=4"`
 	Note string `json:"note"`
 }
 
@@ -188,7 +216,27 @@ type PetGetColorResponse struct {
 }
 
 type ScreeningAnswerAdoptorRequest struct {
-	Rid int `json:"rehomePetId" validate:"required"`
+	Rid int `query:"rid" validate:"required"`
+}
+
+// MyAdoptionRequest is one request the caller made as an adoptor — backs the
+// Profile page's "My Adoptions" list.
+type MyAdoptionRequest struct {
+	Rid             int      `json:"rid"`
+	Pid             int      `json:"pid"`
+	PetName         string   `json:"petName"`
+	PetImageAddress []string `json:"petImageAddress"`
+	RehomeStatus    string   `json:"rehomeStatus"`
+	OwnerPhone      string   `json:"ownerPhone"`
+}
+
+type PetMyAdoptionRequestsResponse struct {
+	AdoptionRequests []MyAdoptionRequest `json:"adoptionRequests"`
+	Message          string              `json:"message"`
+}
+
+type PetCancelAdoptionResponse struct {
+	Message string `json:"message"`
 }
 
 type ScreeningAnswer struct {
@@ -206,8 +254,4 @@ type ScreeningAnswer struct {
 	Q6_1 int8
 	Q6_2 int8
 	Note string
-}
-
-type AllAdoptorsRequest struct {
-	UserID string `query:"uid" validate:"required,gt=0"`
 }
