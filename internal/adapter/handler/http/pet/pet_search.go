@@ -107,10 +107,18 @@ func (h *HttpPetHandler) PetInfo(c *fiber.Ctx) error {
 
 	isOwner := uid != "" && petData != nil && baseUserID(petData.PetOwnerID) == baseUserID(uid)
 
+	// Only worth asking when the viewer isn't the owner — an owner can't
+	// adopt their own pet, so there's nothing meaningful to report.
+	adoptionStatus := ""
+	if uid != "" && !isOwner {
+		adoptionStatus, _ = h.service.MyAdoptionStatus(context.Background(), uid, petGetInfoByIdPayload.Pid)
+	}
+
 	return c.JSON(fiber.Map{
-		"petsInfo": petData,
-		"isOwner":  isOwner,
-		"message":  "Get pet data successfully",
+		"petsInfo":       petData,
+		"isOwner":        isOwner,
+		"adoptionStatus": adoptionStatus,
+		"message":        "Get pet data successfully",
 	})
 }
 
@@ -146,6 +154,29 @@ func (h *HttpPetHandler) DeletePet(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"message": "Pet deleted successfully",
+	})
+}
+
+// MyPets godoc
+// @Summary Get the authenticated user's own pets
+// @Description List every pet the caller has registered, regardless of status — backs the Profile page's "My Rehoming" list
+// @Tags pets
+// @Produce json
+// @Success 200 {object} domain.PetSearchFilterResponse
+// @Router /api/pets/mine [get]
+func (h *HttpPetHandler) MyPets(c *fiber.Ctx) error {
+	uid := c.Locals("uid").(string)
+
+	petData, err := h.service.MyPets(context.Background(), uid)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error to get your pets",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"petsInfo": petData,
+		"message":  "Get your pets successfully",
 	})
 }
 

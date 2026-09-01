@@ -51,6 +51,8 @@ type UserInfo struct {
 	Lastname    string
 	Phone       string
 	Address     string
+	AddressLat  float64
+	AddressLong float64
 	CoverImage  *string
 	DogBreed    string
 	DogColor    string
@@ -77,6 +79,7 @@ type AdoptorInfo struct {
 	Lastname     string `json:"lastName"`
 	PhoneNumber  string `json:"phoneNumber"`
 	Address      string `json:"address"`
+	ImageAddress string `json:"imageAddress"`
 	Rid          int    `json:"rehomeId"`
 	RehomeStatus string `json:"rehomeStatus"`
 }
