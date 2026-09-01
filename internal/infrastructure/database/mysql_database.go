@@ -11,10 +11,6 @@ import (
 )
 
 func NewMySQLDatabase(cfg config.MySQLConfig) (*sql.DB, error) {
-	// clientFoundRows: without it, RowsAffected() reports rows *changed* by an
-	// UPDATE rather than rows *matched* — so re-saving identical values (e.g.
-	// retrying after a partial failure) reports 0 and gets misread as "not
-	// found" by the RowsAffected()==0 checks in the adapters.
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&clientFoundRows=true",
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name,
 	)

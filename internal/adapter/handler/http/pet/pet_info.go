@@ -1,22 +1,13 @@
 package pet
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"context"
+	"github.com/gofiber/fiber/v2"
 	"mime/multipart"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
 
-// RegisterPet godoc
-// @Summary Register pet
-// @Description Register a new pet
-// @Tags pets
-// @Accept json
-// @Produce json
-// @Param pet body domain.PetRegisterRequest true "Pet Payload"
-// @Success 200 {object} domain.PetRegisterResponse
-// @Router /api/pet/register [post]
 func (h *HttpPetHandler) Register(c *fiber.Ctx) error {
 	payload := new(domain.PetRegisterRequest)
 	if err := c.BodyParser(payload); err != nil {
@@ -59,16 +50,6 @@ func (h *HttpPetHandler) Register(c *fiber.Ctx) error {
 	})
 }
 
-// UpdatePet godoc
-// @Summary Update pet
-// @Description Update the authenticated user's own pet listing
-// @Tags pets
-// @Accept mpfd
-// @Produce json
-// @Param pid path string true "Pet ID"
-// @Param pet body domain.PetUpdateRequest true "Pet Payload"
-// @Success 200 {object} domain.PetUpdateResponse
-// @Router /api/pets/{pid} [put]
 func (h *HttpPetHandler) UpdatePet(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 
@@ -158,7 +139,7 @@ func (h *HttpPetHandler) PetBehavior(c *fiber.Ctx) error {
 			"error": "Incorrect request format",
 		})
 	}
-	
+
 	behaviorData, err := h.service.PetBehavior(context.Background(), PetGetBehaviorRequest.PetType, PetGetBehaviorRequest.PetBreed)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

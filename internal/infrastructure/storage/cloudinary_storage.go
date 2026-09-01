@@ -48,8 +48,6 @@ func (c *CloudinaryUploader) UploadImages(files []*multipart.FileHeader, folder 
 	return urls, nil
 }
 
-// DeleteImage removes the asset behind a Cloudinary secure URL, deriving its
-// public ID from the URL since callers only ever persist the URL, not the ID.
 func (c *CloudinaryUploader) DeleteImage(imageURL string) error {
 	publicID, err := publicIDFromURL(imageURL)
 	if err != nil {
@@ -64,18 +62,12 @@ func (c *CloudinaryUploader) DeleteImage(imageURL string) error {
 		return err
 	}
 
-	// Destroy reports a mismatched/already-gone public ID as a 200 response
-	// with Result "not found" rather than a Go error, so a bad extraction
-	// above would otherwise look like a silent success.
 	if result.Result != "ok" {
 		return fmt.Errorf("cloudinary destroy for public id %q returned %q", publicID, result.Result)
 	}
 	return nil
 }
 
-// publicIDFromURL extracts the public ID (including any folder prefix) from a
-// Cloudinary delivery URL, e.g. ".../upload/v1700000000/users/abc123.jpg" ->
-// "users/abc123".
 func publicIDFromURL(imageURL string) (string, error) {
 	const marker = "/upload/"
 	idx := strings.Index(imageURL, marker)

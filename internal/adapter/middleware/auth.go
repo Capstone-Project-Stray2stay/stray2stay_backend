@@ -35,9 +35,6 @@ func AuthRequired(c *fiber.Ctx) error {
 	return c.Next()
 }
 
-// OptionalAuth sets "uid" in locals when a valid token cookie is present, but
-// never blocks the request — for public routes (like pet search) whose
-// results should still adapt for a logged-in caller without requiring login.
 func OptionalAuth(c *fiber.Ctx) error {
 	cookie := c.Cookies("token")
 	if cookie == "" {

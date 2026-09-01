@@ -58,11 +58,6 @@ func (m *MySQLPetAdapter) CreatePet(
 	return int(id), nil
 }
 
-// UpdatePet overwrites a pet's editable fields, but only when uid is its
-// owner. imageAddress is the *final* image list (existing URLs the caller
-// kept, plus any newly uploaded ones already merged in by the service) —
-// whatever was on the pet before that's no longer in it comes back as
-// removedImages so the caller can clean those up in Cloudinary.
 func (m *MySQLPetAdapter) UpdatePet(
 	uid string,
 	pid int,
@@ -97,12 +92,12 @@ func (m *MySQLPetAdapter) UpdatePet(
 	var oldImageRaw []byte
 	err = tx.QueryRow(`
 		SELECT pet_imageAddress FROM Pets
-		WHERE pet_id = ? AND SUBSTRING_INDEX(pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
+		WHERE pet_id = ? AND pet_status = 'AVALIABLE' AND SUBSTRING_INDEX(pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
 		FOR UPDATE
 	`, pid, uid).Scan(&oldImageRaw)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.New("pet not found or not owned by user")
+			return nil, errors.New("pet not found, not owned by user, or already adopted")
 		}
 		return nil, errors.New("fail to update pet")
 	}
@@ -199,10 +194,6 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 		filterArgs = append(filterArgs, petColor)
 	}
 	if petLocation != "" {
-		// pet_address is freeform text built as "street, subDistrict, district,
-		// province" (see the frontend's joinAddress/resolveLocation) rather than
-		// a location enum, so this is a substring match against the province
-		// name rather than an exact-match column.
 		conditions = append(conditions, "pet_address LIKE ?")
 		filterArgs = append(filterArgs, "%"+petLocation+"%")
 	}
@@ -213,10 +204,10 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	var query string
 	var args []any
-	
+
 	if hasLocation {
 		query = `
 		SELECT pet_id, pet_name, pet_imageAddress, pet_ageGroup,
@@ -403,7 +394,7 @@ func (m *MySQLPetAdapter) GetPetInfo(pid int) (domain.PetInfo, error) {
 		}
 		return domain.PetInfo{}, errors.New("fail to get pet info")
 	}
-	
+
 	if len(imageAddressRaw) > 0 {
 		if err := json.Unmarshal(imageAddressRaw, &pet.PetImageAddress); err != nil {
 			return domain.PetInfo{}, errors.New("fail to parse pet image address")
@@ -414,9 +405,6 @@ func (m *MySQLPetAdapter) GetPetInfo(pid int) (domain.PetInfo, error) {
 			return domain.PetInfo{}, errors.New("fail to parse pet personality")
 		}
 	}
-	// pet_vaccination is a MySQL SET column, not JSON — it comes back as a
-	// plain comma-separated string (e.g. "DHPPi,Rabies"), matching how
-	// CreatePet writes it via strings.Join(vaccination, ",").
 	if raw := strings.TrimSpace(string(vacinationRaw)); raw != "" {
 		pet.PetVaccination = strings.Split(raw, ",")
 	}
@@ -516,38 +504,39 @@ func (m *MySQLPetAdapter) UpdatePetAdopter(rid int, uid string) (err error) {
 		}
 	}()
 
-	result, execErr := tx.Exec(`
+	var petID int
+	scanErr := tx.QueryRow(`
+		SELECT pr.rehome_petId
+		FROM Pets_Rehoming pr
+		JOIN Pets p ON pr.rehome_petId = p.pet_id
+		WHERE pr.rehome_id = ? AND pr.rehome_status = 'PENDING' AND p.pet_status = 'AVALIABLE'
+		      AND SUBSTRING_INDEX(p.pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
+		FOR UPDATE
+	`, rid, uid).Scan(&petID)
+	if scanErr != nil {
+		if scanErr == sql.ErrNoRows {
+			err = errors.New("adoption request not found or already processed")
+		} else {
+			err = scanErr
+		}
+		return err
+	}
+
+	if _, execErr := tx.Exec(`
 		UPDATE Pets_Rehoming pr
 		JOIN Pets p ON pr.rehome_petId = p.pet_id
 		SET pr.rehome_status = 'ACCEPT', p.pet_status = 'ADOPTED'
-		WHERE pr.rehome_id = ? AND pr.rehome_status = 'PENDING' AND p.pet_status = 'AVALIABLE'
-		      AND SUBSTRING_INDEX(p.pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
-	`, rid, uid)
-	if execErr != nil {
+		WHERE pr.rehome_id = ?
+	`, rid); execErr != nil {
 		err = execErr
 		return errors.New("fail to accept adopter")
 	}
 
-	rowsAffected, raErr := result.RowsAffected()
-	if raErr != nil {
-		err = raErr
-		return raErr
-	}
-	if rowsAffected == 0 {
-		err = errors.New("adoption request not found or already processed")
-		return err
-	}
-
-	_, execErr = tx.Exec(`
+	if _, execErr := tx.Exec(`
 		UPDATE Pets_Rehoming
 		SET rehome_status = 'DENIED'
-		WHERE rehome_petId = (
-			SELECT rehome_petId FROM Pets_Rehoming WHERE rehome_id = ?
-		)
-		AND rehome_id != ?
-		AND rehome_status = 'PENDING'
-	`, rid, rid)
-	if execErr != nil {
+		WHERE rehome_petId = ? AND rehome_id != ? AND rehome_status = 'PENDING'
+	`, petID, rid); execErr != nil {
 		err = execErr
 		return errors.New("fail to deny other adopters")
 	}
@@ -587,10 +576,6 @@ func (m *MySQLPetAdapter) GetScreeningAnswer(rehomeID int, uid string) (domain.S
 	return a, nil
 }
 
-// GetMyAdoptionStatus reports uid's own most recent adoption request on a
-// pet — "" if they've never requested it — so the pet-info handler can tell
-// the viewer "Adopt the Pet" from "Request Pending" without exposing anyone
-// else's requests.
 func (m *MySQLPetAdapter) GetMyAdoptionStatus(pid int, uid string) (status string, err error) {
 	err = m.mysql_db.QueryRow(`
 		SELECT rehome_status FROM Pets_Rehoming
@@ -668,8 +653,6 @@ func (m *MySQLPetAdapter) GetAllAdoptors(uid string) (adoptors []domain.PetAdopt
 	return adoptors, nil
 }
 
-// GetMyAdoptionRequests lists every request uid has made as an adoptor,
-// newest first — backs the Profile page's "My Adoptions" list.
 func (m *MySQLPetAdapter) GetMyAdoptionRequests(uid string) (requests []domain.MyAdoptionRequest, err error) {
 	rows, err := m.mysql_db.Query(`
 		SELECT pr.rehome_id, p.pet_id, p.pet_name, p.pet_imageAddress,
@@ -714,10 +697,6 @@ func (m *MySQLPetAdapter) GetMyAdoptionRequests(uid string) (requests []domain.M
 	return requests, nil
 }
 
-// CancelAdoptionRequest withdraws uid's own pending request, deleting the row
-// outright. Already-decided requests (ACCEPT/DENIED) and requests belonging
-// to someone else are left untouched — zero rows affected surfaces as an
-// error rather than a silent no-op.
 func (m *MySQLPetAdapter) CancelAdoptionRequest(uid string, rid int) (err error) {
 	result, execErr := m.mysql_db.Exec(`
 		DELETE FROM Pets_Rehoming
@@ -739,9 +718,6 @@ func (m *MySQLPetAdapter) CancelAdoptionRequest(uid string, rid int) (err error)
 	return nil
 }
 
-// DeletePet removes a pet row, but only when uid is its owner, and hands back
-// the image URLs that were on it so the caller can clean those up in
-// Cloudinary (this adapter has no uploader dependency to do that itself).
 func (m *MySQLPetAdapter) DeletePet(uid string, pid int) (imageAddresses []string, err error) {
 	tx, err := m.mysql_db.Begin()
 	if err != nil {
@@ -753,18 +729,15 @@ func (m *MySQLPetAdapter) DeletePet(uid string, pid int) (imageAddresses []strin
 		}
 	}()
 
-	// OAuth-registered accounts store user_id (and thus pet_ownerId) as
-	// "<uuid>:OAUTH", but the JWT's uid claim carries the bare uuid — compare
-	// on the part before the colon so OAuth owners can manage their own pets.
 	var imageAddressRaw []byte
 	err = tx.QueryRow(`
 		SELECT pet_imageAddress FROM Pets
-		WHERE pet_id = ? AND SUBSTRING_INDEX(pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
+		WHERE pet_id = ? AND pet_status = 'AVALIABLE' AND SUBSTRING_INDEX(pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
 		FOR UPDATE
 	`, pid, uid).Scan(&imageAddressRaw)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.New("pet not found or not owned by user")
+			return nil, errors.New("pet not found, not owned by user, or already adopted")
 		}
 		return nil, errors.New("fail to delete pet")
 	}
@@ -801,9 +774,6 @@ func (m *MySQLPetAdapter) DeletePet(uid string, pid int) (imageAddresses []strin
 	return imageAddresses, nil
 }
 
-// GetPetsByOwner lists every pet uid has registered, regardless of status —
-// this backs the Profile page's "My Rehoming" list, which is a management
-// view of the owner's own listings, not a public browse.
 func (m *MySQLPetAdapter) GetPetsByOwner(uid string) (petData []domain.PetsInfo, err error) {
 	rows, err := m.mysql_db.Query(`
 		SELECT pet_id, pet_name, pet_imageAddress, pet_ageGroup, pet_gender,

@@ -6,18 +6,6 @@ import (
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
 
-// Adopt godoc
-// @Summary Submit adoption request
-// @Description Submit an adoption questionnaire form for a specific pet (requires authentication)
-// @Tags pets
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param adoption body domain.PetAdoptRequest true "Adoption Form Payload"
-// @Success 200 {object} domain.PetAdoptResponse
-// @Failure 400 {object} domain.ErrorResponse
-// @Failure 500 {object} domain.ErrorResponse
-// @Router /api/pet/adopt [post]
 func (h *HttpPetHandler) Adopt(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 
@@ -34,12 +22,8 @@ func (h *HttpPetHandler) Adopt(c *fiber.Ctx) error {
 		})
 	}
 
-
 	rid, err := h.service.AdoptPet(c.Context(), uid, petAdoptPayload.Pid, petAdoptPayload.Q1_1, petAdoptPayload.Q1_2, petAdoptPayload.Q1_3, petAdoptPayload.Q2_1, petAdoptPayload.Q2_2, petAdoptPayload.Q2_3, petAdoptPayload.Q3_1, petAdoptPayload.Q3_2, petAdoptPayload.Q3_3, petAdoptPayload.Q4_1, petAdoptPayload.Q5_1, petAdoptPayload.Q6_1, petAdoptPayload.Q6_2, petAdoptPayload.Note)
 	if err != nil {
-		// Surfaced verbatim rather than a generic message: this is where
-		// "pet not available for adoption" and "you already have a pending
-		// request for this pet" reach the adopter.
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})
@@ -50,17 +34,6 @@ func (h *HttpPetHandler) Adopt(c *fiber.Ctx) error {
 	})
 }
 
-// SelectAdopter godoc
-// @Summary Select an adopter
-// @Description Accept a pending adoption request, marking the pet as adopted and denying all other requests
-// @Tags pets
-// @Accept json
-// @Produce json
-// @Param adopter body domain.PetSelectAdopterRequest true "Select Adopter Payload"
-// @Success 200 {object} domain.PetSelectAdopterResponse
-// @Failure 400 {object} domain.ErrorResponse
-// @Failure 500 {object} domain.ErrorResponse
-// @Router /api/pet/adopt/select [patch]
 func (h *HttpPetHandler) SelectAdopter(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 
@@ -104,8 +77,7 @@ func (h *HttpPetHandler) ScreeningAnswerAdoptor(c *fiber.Ctx) error {
 		})
 	}
 
-	// Call the service method to handle the screening answers
-	screeningAnswer, err := h.service.ScreeningAnswerAdoptor(c.Context(), screeningAnswerAdoptorPayload, uid);
+	screeningAnswer, err := h.service.ScreeningAnswerAdoptor(c.Context(), screeningAnswerAdoptorPayload, uid)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to query screening answers",
@@ -113,7 +85,7 @@ func (h *HttpPetHandler) ScreeningAnswerAdoptor(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Screening answers query successfully",
+		"message":         "Screening answers query successfully",
 		"screeningAnswer": screeningAnswer,
 	})
 }
@@ -134,15 +106,6 @@ func (h *HttpPetHandler) AllAdoptors(c *fiber.Ctx) error {
 	})
 }
 
-// MyAdoptionRequests godoc
-// @Summary List the authenticated user's own adoption requests
-// @Description Every request the caller has made as an adoptor, newest first — backs the Profile page's "My Adoptions" list
-// @Tags pets
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} domain.PetMyAdoptionRequestsResponse
-// @Failure 500 {object} domain.ErrorResponse
-// @Router /api/pets/mine/adoptions [get]
 func (h *HttpPetHandler) MyAdoptionRequests(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 
@@ -159,16 +122,6 @@ func (h *HttpPetHandler) MyAdoptionRequests(c *fiber.Ctx) error {
 	})
 }
 
-// CancelAdoptionRequest godoc
-// @Summary Withdraw a pending adoption request
-// @Description Deletes the caller's own request, only while it's still PENDING
-// @Tags pets
-// @Produce json
-// @Security BearerAuth
-// @Param rid path string true "Adoption request ID"
-// @Success 200 {object} domain.PetCancelAdoptionResponse
-// @Failure 500 {object} domain.ErrorResponse
-// @Router /api/pets/mine/adoptions/{rid} [delete]
 func (h *HttpPetHandler) CancelAdoptionRequest(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 

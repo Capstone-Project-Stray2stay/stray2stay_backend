@@ -40,8 +40,6 @@ type PetUpdateRequest struct {
 	PetAddress     string   `form:"petAddress" validate:"required"`
 	PetAddressLat  float64  `form:"petAddressLat" validate:"required"`
 	PetAddressLong float64  `form:"petAddressLong" validate:"required"`
-	// URLs of the pet's already-uploaded photos that should be kept — anything
-	// on the pet today but missing from this list gets deleted from Cloudinary.
 	ExistingImages []string `form:"existingImages"`
 	Note           string   `form:"note"`
 }
@@ -54,8 +52,6 @@ type PetGetInfoByIdRequest struct {
 	Pid int `json:"petId" validate:"required,gt=0"`
 }
 type PetInfo struct {
-	// Not serialized — only used server-side (see the PetInfo handler) to
-	// compute whether the requesting caller owns this pet.
 	PetOwnerID      string          `json:"-"`
 	Pid             int             `json:"pid"`
 	PetName         string          `json:"petName"`
@@ -125,10 +121,7 @@ type PetsInfo struct {
 }
 
 type PetAdoptRequest struct {
-	Pid int `json:"pid" validate:"required,gt=0"`
-	// Booleans and choice-indexes below deliberately skip `required`: its zero
-	// value (false / 0) is a legitimate answer here (a "No", or a form's first
-	// option) — `required` would wrongly reject those as if left blank.
+	Pid  int    `json:"pid" validate:"required,gt=0"`
 	Q1_1 bool   `json:"q1_1"`
 	Q1_2 bool   `json:"q1_2"`
 	Q1_3 string `json:"q1_3" validate:"required"`
@@ -138,7 +131,6 @@ type PetAdoptRequest struct {
 	Q3_1 int8   `json:"q3_1" validate:"gte=0"`
 	Q3_2 bool   `json:"q3_2"`
 	Q3_3 string `json:"q3_3" validate:"required"`
-	// Bounds match each question's actual option count (3/4/5/5 options).
 	Q4_1 int8   `json:"q4_1" validate:"gte=0,lte=2"`
 	Q5_1 int8   `json:"q5_1" validate:"gte=0,lte=3"`
 	Q6_1 int8   `json:"q6_1" validate:"gte=0,lte=4"`
@@ -219,8 +211,6 @@ type ScreeningAnswerAdoptorRequest struct {
 	Rid int `query:"rid" validate:"required"`
 }
 
-// MyAdoptionRequest is one request the caller made as an adoptor — backs the
-// Profile page's "My Adoptions" list.
 type MyAdoptionRequest struct {
 	Rid             int      `json:"rid"`
 	Pid             int      `json:"pid"`

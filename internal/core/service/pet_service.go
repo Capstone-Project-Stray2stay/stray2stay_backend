@@ -102,9 +102,6 @@ func (s *PetServiceImpl) UpdatePet(ctx context.Context, uid string, pid int, pet
 		return err
 	}
 
-	// Best-effort: the pet's row is already updated, so a stray Cloudinary
-	// asset for a photo the user removed shouldn't fail the request — same
-	// reasoning as DeletePet's image cleanup.
 	for _, imageURL := range removedImages {
 		if deleteErr := s.uploader.DeleteImage(imageURL); deleteErr != nil {
 			log.Printf("[UpdatePet] failed to delete image %q for pet %d: %v", imageURL, pid, deleteErr)
@@ -115,20 +112,9 @@ func (s *PetServiceImpl) UpdatePet(ctx context.Context, uid string, pid int, pet
 }
 
 func (s *PetServiceImpl) SearchPets(ctx context.Context, uid string, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, petLocation string, userLat float64, userLong float64) (petData []domain.PetsInfo, totalCount int, err error) {
-	if uid != "" {
-		var homeLat, homeLong float64
-		petAgeGroup, petGender, petBreed, petColor, homeLat, homeLong = s.applyUserDefaults(
-			uid, petType, petAgeGroup, petGender, petBreed, petColor,
-		)
-
-		// petLocation stays whatever the caller explicitly picked (or blank —
-		// browsing with no location filter should show pets from everywhere,
-		// not just the viewer's own province). Coordinates are different: with
-		// none supplied, falling back to the viewer's own saved address just
-		// sorts nearest-first via GetPetsInfo's distance ORDER BY, it doesn't
-		// exclude anything.
-		if userLat == 0 && userLong == 0 {
-			userLat, userLong = homeLat, homeLong
+	if uid != "" && userLat == 0 && userLong == 0 {
+		if userInfo, err := s.userRepo.GetUserInfo(uid); err == nil {
+			userLat, userLong = userInfo.AddressLat, userInfo.AddressLong
 		}
 	}
 
@@ -139,63 +125,12 @@ func (s *PetServiceImpl) SearchPets(ctx context.Context, uid string, page int, p
 	return data, totalCount, nil
 }
 
-// applyUserDefaults fills any blank breed/color/gender/ageGroup filter with
-// the logged-in user's saved Users_Preferences defaults (species-specific, so
-// these only apply once petType is "dog" or "cat" — with no species picked
-// there's no single preference row to fall back to), and hands back the
-// user's own saved coordinates for SearchPets to use as a distance-sort
-// origin when the caller didn't supply any. A lookup failure is treated as
-// "no defaults available" rather than failing the whole search.
-func (s *PetServiceImpl) applyUserDefaults(uid string, petType string, petAgeGroup string, petGender string, petBreed string, petColor string) (ageGroup string, gender string, breed string, color string, lat float64, long float64) {
-	userInfo, err := s.userRepo.GetUserInfo(uid)
-	if err != nil {
-		return petAgeGroup, petGender, petBreed, petColor, 0, 0
-	}
-
-	switch petType {
-	case "dog":
-		if petBreed == "" {
-			petBreed = userInfo.DogBreed
-		}
-		if petColor == "" {
-			petColor = userInfo.DogColor
-		}
-		if petAgeGroup == "" {
-			petAgeGroup = userInfo.DogAgeGroup
-		}
-		if petGender == "" {
-			petGender = userInfo.DogGender
-		}
-	case "cat":
-		if petBreed == "" {
-			petBreed = userInfo.CatBreed
-		}
-		if petColor == "" {
-			petColor = userInfo.CatColor
-		}
-		if petAgeGroup == "" {
-			petAgeGroup = userInfo.CatAgeGroup
-		}
-		if petGender == "" {
-			petGender = userInfo.CatGender
-		}
-	}
-
-	return petAgeGroup, petGender, petBreed, petColor, userInfo.AddressLat, userInfo.AddressLong
-}
-
 func (s *PetServiceImpl) PetInfo(ctx context.Context, pid int) (petData *domain.PetInfo, err error) {
 	data, err := s.mysqlRepo.GetPetInfo(pid)
 	if err != nil {
 		return nil, err
 	}
 
-	// pet_detail isn't a MySQL column — the write-up text lives in Mongo's
-	// per-breed personality field, keyed by breedName against Pets.pet_breed.
-	// A lookup failure here shouldn't fail the whole request, same reasoning
-	// as applyUserDefaults: missing enrichment data isn't worth a 500.
-	// GetBreedBehavior's collection lookup only recognizes lowercase
-	// "dog"/"cat", but pet_type is stored as "DOG"/"CAT".
 	if detail, err := s.mongoRepo.GetBreedBehavior(strings.ToLower(data.PetType), data.PetBreed); err == nil {
 		data.PetDetail = detail
 	}
@@ -273,9 +208,6 @@ func (s *PetServiceImpl) DeletePet(ctx context.Context, uid string, pid int) (er
 		return err
 	}
 
-	// Best-effort: the pet row is already gone, so a stray Cloudinary asset
-	// shouldn't fail the request — same reasoning as UpdateUserImage's old
-	// image cleanup.
 	for _, imageURL := range imageAddresses {
 		if deleteErr := s.uploader.DeleteImage(imageURL); deleteErr != nil {
 			log.Printf("[DeletePet] failed to delete image %q for pet %d: %v", imageURL, pid, deleteErr)

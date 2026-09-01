@@ -8,15 +8,6 @@ import (
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
 
-// UpdateUser godoc
-// @Summary Update user
-// @Description Update authenticated user's profile
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param user body domain.UserUpdateRequest true "Update Payload"
-// @Success 200 {object} domain.UserUpdateResponse
-// @Router /api/user/update [put]
 func (h *HttpUserHandler) UpdateUser(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 
@@ -38,15 +29,6 @@ func (h *HttpUserHandler) UpdateUser(c *fiber.Ctx) error {
 	})
 }
 
-// UpdateUserImage godoc
-// @Summary Update user profile image
-// @Description Upload and set the authenticated user's profile image
-// @Tags users
-// @Accept multipart/form-data
-// @Produce json
-// @Param image formData file true "Profile image"
-// @Success 200 {object} domain.UserUpdateImageResponse
-// @Router /api/user/image [put]
 func (h *HttpUserHandler) UpdateUserImage(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 
@@ -70,13 +52,6 @@ func (h *HttpUserHandler) UpdateUserImage(c *fiber.Ctx) error {
 	})
 }
 
-// UserInfo godoc
-// @Summary Get user info
-// @Description Get authenticated user profile
-// @Tags users
-// @Produce json
-// @Success 200 {object} domain.UserInfoResponse
-// @Router /api/user/info [get]
 func (h *HttpUserHandler) UserInfo(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 

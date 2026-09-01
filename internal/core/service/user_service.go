@@ -87,8 +87,6 @@ func (s *UserServiceImpl) UpdateUserImage(ctx context.Context, uid string, file 
 		return "", err
 	}
 
-	// Best-effort: the profile image is already switched over in the DB, so a
-	// stale asset left behind in Cloudinary shouldn't fail the request.
 	if oldImageURL != nil && *oldImageURL != "" {
 		if err := s.uploader.DeleteImage(*oldImageURL); err != nil {
 			log.Printf("[UpdateUserImage] failed to delete old image %q: %v", *oldImageURL, err)

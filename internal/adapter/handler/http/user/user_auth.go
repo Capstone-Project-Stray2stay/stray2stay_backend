@@ -28,15 +28,10 @@ func (h *HttpUserHandler) BeginOAuth(c *fiber.Ctx) error {
 	})(c)
 }
 
-// OAuthCallback godoc
-// @Summary OAuth callback
-// @Router /api/user/oauth/{provider}/callback [get]
 func (h *HttpUserHandler) OAuthCallback(c *fiber.Ctx) error {
 	provider := c.Params("provider")
 
 	return adaptor.HTTPHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// gothic reads the provider from the query string / URL param depending on setup;
-		// make sure it's present same as in BeginOAuth
 		q := r.URL.Query()
 		q.Set("provider", provider)
 		r.URL.RawQuery = q.Encode()
@@ -90,22 +85,13 @@ func (h *HttpUserHandler) OAuthCallback(c *fiber.Ctx) error {
 			HttpOnly: true,
 			Secure:   os.Getenv("ENV") == "production",
 			Path:     "/",
-			SameSite: http.SameSiteLaxMode, // Lax, not Strict — this is a top-level cross-site redirect from Google
+			SameSite: http.SameSiteLaxMode,
 		})
 
 		http.Redirect(w, r, os.Getenv("ORIGIN"), http.StatusFound)
 	})(c)
 }
 
-// Login godoc
-// @Summary Login user
-// @Description Login using email and password
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param credentials body domain.UserLoginRequest true "Login Payload"
-// @Success 200 {object} domain.UserLoginResponse
-// @Router /api/user/login [post]
 func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 	userLoginPayload := new(domain.UserLoginRequest)
 	if err := c.BodyParser(userLoginPayload); err != nil {
@@ -151,15 +137,6 @@ func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 	})
 }
 
-// Register godoc
-// @Summary Register user
-// @Description Create new user account
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param user body domain.UserRegisterRequest true "Register Payload"
-// @Success 200 {object} domain.UserRegisterResponse
-// @Router /api/user/register [post]
 func (h *HttpUserHandler) Register(c *fiber.Ctx) error {
 	userRegisterPayload := new(domain.UserRegisterRequest)
 	if err := c.BodyParser(userRegisterPayload); err != nil {
@@ -186,12 +163,6 @@ func (h *HttpUserHandler) Register(c *fiber.Ctx) error {
 	})
 }
 
-// DeleteUser godoc
-// @Summary Delete user
-// @Description Delete authenticated user
-// @Tags users
-// @Success 200 {object} domain.UserDeleteResponse
-// @Router /api/user/delete [delete]
 func (h *HttpUserHandler) DeleteUser(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 

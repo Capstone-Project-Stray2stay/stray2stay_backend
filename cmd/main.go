@@ -1,9 +1,3 @@
-// @title Pet Adoption API
-// @version 1.0
-// @description API for pet adoption platform
-// @host localhost:3000
-// @BasePath /
-
 package main
 
 import (

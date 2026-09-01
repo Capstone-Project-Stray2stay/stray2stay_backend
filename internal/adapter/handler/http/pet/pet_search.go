@@ -10,10 +10,6 @@ import (
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
 
-// baseUserID strips the ":<provider>" suffix OAuth accounts store on
-// user_id/pet_ownerId (see MySQLUserAdapter.OAuthAuthenticateUser), so
-// comparing a pet's owner against the JWT's uid claim works regardless of
-// which side carries the suffix.
 func baseUserID(uid string) string {
 	if i := strings.IndexByte(uid, ':'); i != -1 {
 		return uid[:i]
@@ -21,13 +17,6 @@ func baseUserID(uid string) string {
 	return uid
 }
 
-// PetsInfo godoc
-// @Summary Get all pets
-// @Description Retrieve all pets
-// @Tags pets
-// @Produce json
-// @Success 200 {object} domain.PetSearchFilterResponse
-// @Router /api/pet/all [get]
 func (h *HttpPetHandler) PetSearchFilter(c *fiber.Ctx) error {
 	petSearchFilterPayload := new(domain.PetSearchFilterRequest)
 	if err := c.QueryParser(petSearchFilterPayload); err != nil {
@@ -42,8 +31,6 @@ func (h *HttpPetHandler) PetSearchFilter(c *fiber.Ctx) error {
 		})
 	}
 
-	// Set by middleware.OptionalAuth only when a valid session is present —
-	// empty for anonymous callers, who get no preference-based fallback.
 	uid, _ := c.Locals("uid").(string)
 
 	petData, totalCount, err := h.service.SearchPets(context.Background(), uid, petSearchFilterPayload.Page, petSearchFilterPayload.PageSize, petSearchFilterPayload.PetAgeGroup, petSearchFilterPayload.PetGender, petSearchFilterPayload.PetType, petSearchFilterPayload.PetBreed, petSearchFilterPayload.PetColor, petSearchFilterPayload.PetLocation, petSearchFilterPayload.UserLat, petSearchFilterPayload.UserLong)
@@ -53,8 +40,6 @@ func (h *HttpPetHandler) PetSearchFilter(c *fiber.Ctx) error {
 		})
 	}
 
-	// Mirrors GetPetsInfo's own default so totalPages lines up with the page
-	// size actually used for the query.
 	pageSize := petSearchFilterPayload.PageSize
 	if pageSize <= 0 {
 		pageSize = 10
@@ -72,17 +57,7 @@ func (h *HttpPetHandler) PetSearchFilter(c *fiber.Ctx) error {
 	})
 }
 
-// PetInfo godoc
-// @Summary Get pet info
-// @Description Retrieve pet by ID
-// @Tags pets
-// @Produce json
-// @Param pid path string true "Pet ID"
-// @Success 200 {object} domain.PetGetInfoByIdResponse
-// @Router /api/pet/{pid} [get]
 func (h *HttpPetHandler) PetInfo(c *fiber.Ctx) error {
-	// Set by middleware.OptionalAuth only when a valid session is present —
-	// this route is public, so anonymous callers just get isOwner: false.
 	uid, _ := c.Locals("uid").(string)
 
 	petGetInfoByIdPayload := new(domain.PetGetInfoByIdRequest)
@@ -107,8 +82,6 @@ func (h *HttpPetHandler) PetInfo(c *fiber.Ctx) error {
 
 	isOwner := uid != "" && petData != nil && baseUserID(petData.PetOwnerID) == baseUserID(uid)
 
-	// Only worth asking when the viewer isn't the owner — an owner can't
-	// adopt their own pet, so there's nothing meaningful to report.
 	adoptionStatus := ""
 	if uid != "" && !isOwner {
 		adoptionStatus, _ = h.service.MyAdoptionStatus(context.Background(), uid, petGetInfoByIdPayload.Pid)
@@ -122,14 +95,6 @@ func (h *HttpPetHandler) PetInfo(c *fiber.Ctx) error {
 	})
 }
 
-// DeletePet godoc
-// @Summary Delete pet
-// @Description Delete the authenticated user's own pet listing, including its uploaded images
-// @Tags pets
-// @Produce json
-// @Param pid path string true "Pet ID"
-// @Success 200 {object} domain.PetDeleteResponse
-// @Router /api/pets/{pid} [delete]
 func (h *HttpPetHandler) DeletePet(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 
@@ -157,13 +122,6 @@ func (h *HttpPetHandler) DeletePet(c *fiber.Ctx) error {
 	})
 }
 
-// MyPets godoc
-// @Summary Get the authenticated user's own pets
-// @Description List every pet the caller has registered, regardless of status — backs the Profile page's "My Rehoming" list
-// @Tags pets
-// @Produce json
-// @Success 200 {object} domain.PetSearchFilterResponse
-// @Router /api/pets/mine [get]
 func (h *HttpPetHandler) MyPets(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 
@@ -180,15 +138,6 @@ func (h *HttpPetHandler) MyPets(c *fiber.Ctx) error {
 	})
 }
 
-// PetRandom godoc
-// @Summary Get random pet suggestions
-// @Description Get a random selection of available cats and dogs for adoption
-// @Tags pets
-// @Accept json
-// @Produce json
-// @Success 200 {object} domain.PetsInfoResponse
-// @Failure 500 {object} domain.ErrorResponse
-// @Router /api/pet/random [get]
 func (h *HttpPetHandler) PetRandom(c *fiber.Ctx) error {
 	petData, err := h.service.PetRandom(context.Background())
 	if err != nil {
