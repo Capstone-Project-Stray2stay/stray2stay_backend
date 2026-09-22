@@ -70,7 +70,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		BodyLimit: 20 * 1024 * 1024, // 20MB, to accommodate multi-image pet uploads
+	})
 
 	app.Use(logger.New(logger.Config{
 		Format: "${ip}:${port} ${status} - ${method} ${path}\n",

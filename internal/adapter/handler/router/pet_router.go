@@ -12,6 +12,7 @@ func PetRouter(app *fiber.App, petHandler *pet.HttpPetHandler) {
 
 	pet.Get("/random", petHandler.PetRandom)
 	pet.Get("/breeds", petHandler.PetBreeds)
+	pet.Get("/breeds/images", petHandler.PetBreedImages)
 	pet.Get("/breed/color", petHandler.PetColors)
 	pet.Get("/breed/behavior", petHandler.PetBehavior)
 	pet.Get("/mine", middleware.AuthRequired, petHandler.MyPets)
@@ -20,11 +21,14 @@ func PetRouter(app *fiber.App, petHandler *pet.HttpPetHandler) {
 	pet.Get("/:pid", middleware.OptionalAuth, petHandler.PetInfo)
 	pet.Get("", middleware.OptionalAuth, petHandler.PetSearchFilter)
 	pet.Post("/ai/classify", petHandler.AIClassify)
+	pet.Get("/:pid/screening-questions", middleware.OptionalAuth, petHandler.GetScreeningQuestions)
 
 	authPet := pet.Group("", middleware.AuthRequired)
 
 	authPet.Get("/:pid/adoptors", petHandler.AllAdoptors)
 	authPet.Get("/:pid/screening-answer", petHandler.ScreeningAnswerAdoptor)
+	authPet.Put("/:pid/screening-questions", petHandler.SaveScreeningQuestions)
+	authPet.Post("/:pid/screening-answer-image", petHandler.UploadScreeningAnswerImage)
 
 	authPet.Post("/:pid/select-adopter", petHandler.SelectAdopter)
 	authPet.Post("/:pid/adopt", petHandler.Adopt)

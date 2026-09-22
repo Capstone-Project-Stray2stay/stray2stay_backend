@@ -127,6 +127,32 @@ func (h *HttpPetHandler) PetBreeds(c *fiber.Ctx) error {
 	})
 }
 
+func (h *HttpPetHandler) PetBreedImages(c *fiber.Ctx) error {
+	PetGetBreedsRequest := new(domain.PetGetBreedsRequest)
+	if err := c.QueryParser(PetGetBreedsRequest); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request payload",
+		})
+	}
+	if err := h.validate.Struct(PetGetBreedsRequest); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Incorrect request format",
+		})
+	}
+
+	imageData, err := h.service.AllBreedImages(context.Background(), PetGetBreedsRequest.PetType)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"imageData": imageData,
+		"message":   "Get breed image data successfully",
+	})
+}
+
 func (h *HttpPetHandler) PetBehavior(c *fiber.Ctx) error {
 	PetGetBehaviorRequest := new(domain.PetGetBehaviorRequest)
 	if err := c.QueryParser(PetGetBehaviorRequest); err != nil {

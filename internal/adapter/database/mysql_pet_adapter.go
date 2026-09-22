@@ -17,6 +17,15 @@ func NewMySQLPetAdapter(mysql_db *sql.DB) *MySQLPetAdapter {
 	return &MySQLPetAdapter{mysql_db: mysql_db}
 }
 
+// vaccinationValue joins the vaccination list for storage, or reports SQL
+// NULL when the pet has none recorded rather than persisting "".
+func vaccinationValue(vaccination []string) any {
+	if len(vaccination) == 0 {
+		return nil
+	}
+	return strings.Join(vaccination, ",")
+}
+
 func (m *MySQLPetAdapter) CreatePet(
 	uid string,
 	petName string,
@@ -36,7 +45,7 @@ func (m *MySQLPetAdapter) CreatePet(
 	status string,
 	note string,
 ) (pid int, err error) {
-	vaccineTypesStr := strings.Join(vaccination, ",")
+	vaccineTypes := vaccinationValue(vaccination)
 	result, err := m.mysql_db.Exec(`
 		INSERT INTO Pets (
 			pet_ownerId, pet_name, pet_imageAddress, pet_ageGroup, pet_gender,
@@ -45,7 +54,7 @@ func (m *MySQLPetAdapter) CreatePet(
 			pet_addressLong, pet_status, pet_note
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, uid, petName, imageAddress, ageGroup, gender, petType, breed, color,
-		personality, specialCare, sterilized, vaccineTypesStr, address,
+		personality, specialCare, sterilized, vaccineTypes, address,
 		addressLat, addressLong, status, note)
 	if err != nil {
 		return -1, errors.New("fail to create pet data")
@@ -77,7 +86,7 @@ func (m *MySQLPetAdapter) UpdatePet(
 	addressLong float64,
 	note string,
 ) (removedImages []string, err error) {
-	vaccineTypesStr := strings.Join(vaccination, ",")
+	vaccineTypes := vaccinationValue(vaccination)
 
 	tx, err := m.mysql_db.Begin()
 	if err != nil {
@@ -133,9 +142,21 @@ func (m *MySQLPetAdapter) UpdatePet(
 			pet_address = ?, pet_addressLat = ?, pet_addressLong = ?, pet_note = ?
 		WHERE pet_id = ? AND SUBSTRING_INDEX(pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
 	`, petName, imageAddress, ageGroup, gender, petType, breed, color, personality,
-		specialCare, sterilized, vaccineTypesStr, address, addressLat, addressLong, note,
+		specialCare, sterilized, vaccineTypes, address, addressLat, addressLong, note,
 		pid, uid)
 	if execErr != nil {
+		err = execErr
+		return nil, errors.New("fail to update pet")
+	}
+
+	// The pet's details changed, so any pending applicant answered questions
+	// about a listing that no longer reflects reality — revoke them and make
+	// adopters re-apply against the updated pet.
+	if _, execErr := tx.Exec(`
+		UPDATE Pets_Rehoming
+		SET rehome_status = 'DENIED'
+		WHERE rehome_petId = ? AND rehome_status = 'PENDING'
+	`, pid); execErr != nil {
 		err = execErr
 		return nil, errors.New("fail to update pet")
 	}
@@ -156,6 +177,7 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 	petBreed string,
 	petColor string,
 	petLocation string,
+	keyword string,
 	userLat float64,
 	userLong float64,
 ) (petData []domain.PetsInfo, totalCount int, err error) {
@@ -196,6 +218,11 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 	if petLocation != "" {
 		conditions = append(conditions, "pet_address LIKE ?")
 		filterArgs = append(filterArgs, "%"+petLocation+"%")
+	}
+	if keyword != "" {
+		conditions = append(conditions, "(pet_name LIKE ? OR pet_breed LIKE ? OR pet_color LIKE ?)")
+		like := "%" + keyword + "%"
+		filterArgs = append(filterArgs, like, like, like)
 	}
 
 	whereClause := " WHERE " + strings.Join(conditions, " AND ")
@@ -425,6 +452,7 @@ func (m *MySQLPetAdapter) PostPetAdopt(
 	q3_1 int8, q3_2 bool, q3_3 string,
 	q4_1 int8, q5_1 int8, q6_1 int8, q6_2 int8,
 	note string,
+	answers []domain.CustomAnswerInput,
 ) (rid int, err error) {
 	tx, err := m.mysql_db.Begin()
 	if err != nil {
@@ -485,12 +513,53 @@ func (m *MySQLPetAdapter) PostPetAdopt(
 		err = idErr
 		return -1, idErr
 	}
+	rid = int(id)
+
+	if len(answers) > 0 {
+		validQuestionIDs := make(map[int]bool)
+		rows, questionErr := tx.Query(`
+			SELECT question_id FROM Pets_Screening_Questions WHERE question_petId = ?
+		`, pid)
+		if questionErr != nil {
+			err = questionErr
+			return -1, errors.New("fail to adopt pet")
+		}
+		for rows.Next() {
+			var qid int
+			if scanErr := rows.Scan(&qid); scanErr != nil {
+				rows.Close()
+				err = scanErr
+				return -1, errors.New("fail to adopt pet")
+			}
+			validQuestionIDs[qid] = true
+		}
+		if rowsErr := rows.Err(); rowsErr != nil {
+			rows.Close()
+			err = rowsErr
+			return -1, errors.New("fail to adopt pet")
+		}
+		rows.Close()
+
+		for _, answer := range answers {
+			if !validQuestionIDs[answer.QuestionID] {
+				err = errors.New("invalid screening question for this pet")
+				return -1, err
+			}
+			if _, execErr := tx.Exec(`
+				INSERT INTO Pets_Rehoming_Answers (answer_rehomeId, answer_questionId, answer_value)
+				VALUES (?, ?, ?)
+			`, rid, answer.QuestionID, []byte(answer.Value)); execErr != nil {
+				err = execErr
+				return -1, errors.New("fail to adopt pet")
+			}
+		}
+	}
 
 	if err = tx.Commit(); err != nil {
 		return -1, errors.New("fail to adopt pet")
 	}
 
-	return int(id), nil
+	return rid, nil
 }
 
 func (m *MySQLPetAdapter) UpdatePetAdopter(rid int, uid string) (err error) {
@@ -573,6 +642,33 @@ func (m *MySQLPetAdapter) GetScreeningAnswer(rehomeID int, uid string) (domain.S
 		return domain.ScreeningAnswer{}, errors.New("fail to get screening answer")
 	}
 
+	rows, err := m.mysql_db.Query(`
+		SELECT q.question_id, q.question_text, q.question_type, a.answer_value
+		FROM Pets_Rehoming_Answers a
+		JOIN Pets_Screening_Questions q ON a.answer_questionId = q.question_id
+		WHERE a.answer_rehomeId = ?
+		ORDER BY q.question_order ASC
+	`, rehomeID)
+	if err != nil {
+		return domain.ScreeningAnswer{}, errors.New("fail to get screening answer")
+	}
+	defer rows.Close()
+
+	customAnswers := make([]domain.CustomAnswerResponse, 0)
+	for rows.Next() {
+		var ca domain.CustomAnswerResponse
+		var valueRaw []byte
+		if scanErr := rows.Scan(&ca.QuestionID, &ca.QuestionText, &ca.QuestionType, &valueRaw); scanErr != nil {
+			return domain.ScreeningAnswer{}, errors.New("fail to get screening answer")
+		}
+		ca.Value = json.RawMessage(valueRaw)
+		customAnswers = append(customAnswers, ca)
+	}
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return domain.ScreeningAnswer{}, errors.New("fail to get screening answer")
+	}
+	a.CustomAnswers = customAnswers
+
 	return a, nil
 }
 
@@ -618,12 +714,14 @@ func (m *MySQLPetAdapter) GetAllAdoptors(uid string) (adoptors []domain.PetAdopt
 		var adoptor domain.AdoptorInfo
 		var petID int
 		var petName, petImageAddress string
+		var adoptorImage sql.NullString
 
 		if err := rows.Scan(&petID, &petName, &petImageAddress, &adoptor.UserID,
 			&adoptor.Firstname, &adoptor.Lastname, &adoptor.PhoneNumber, &adoptor.Address,
-			&adoptor.ImageAddress, &adoptor.Rid, &adoptor.RehomeStatus); err != nil {
+			&adoptorImage, &adoptor.Rid, &adoptor.RehomeStatus); err != nil {
 			return nil, err
 		}
+		adoptor.ImageAddress = adoptorImage.String
 
 		if _, ok := petInfoMap[petID]; !ok {
 			petInfoMap[petID] = struct {
@@ -772,6 +870,126 @@ func (m *MySQLPetAdapter) DeletePet(uid string, pid int) (imageAddresses []strin
 	}
 
 	return imageAddresses, nil
+}
+
+// optionsValue marshals a question's option list for storage, or reports SQL
+// NULL when there are none (ESSAY/IMAGE questions carry no options).
+func optionsValue(options []string) (any, error) {
+	if len(options) == 0 {
+		return nil, nil
+	}
+	b, err := json.Marshal(options)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (m *MySQLPetAdapter) GetScreeningQuestions(pid int) (questions []domain.CustomScreeningQuestion, locked bool, err error) {
+	err = m.mysql_db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM Pets_Rehoming WHERE rehome_petId = ?)
+	`, pid).Scan(&locked)
+	if err != nil {
+		return nil, false, errors.New("fail to get screening questions")
+	}
+
+	rows, err := m.mysql_db.Query(`
+		SELECT question_id, question_type, question_text, question_options,
+		       question_required, question_order
+		FROM Pets_Screening_Questions
+		WHERE question_petId = ?
+		ORDER BY question_order ASC, question_id ASC
+	`, pid)
+	if err != nil {
+		return nil, false, errors.New("fail to get screening questions")
+	}
+	defer rows.Close()
+
+	questions = make([]domain.CustomScreeningQuestion, 0)
+	for rows.Next() {
+		var q domain.CustomScreeningQuestion
+		var optionsRaw []byte
+		if scanErr := rows.Scan(&q.QuestionID, &q.QuestionType, &q.QuestionText, &optionsRaw, &q.QuestionRequired, &q.QuestionOrder); scanErr != nil {
+			return nil, false, errors.New("fail to get screening questions")
+		}
+		if len(optionsRaw) > 0 {
+			if unmarshalErr := json.Unmarshal(optionsRaw, &q.QuestionOptions); unmarshalErr != nil {
+				return nil, false, errors.New("fail to parse screening question options")
+			}
+		}
+		questions = append(questions, q)
+	}
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, false, errors.New("fail to get screening questions")
+	}
+
+	return questions, locked, nil
+}
+
+func (m *MySQLPetAdapter) SaveScreeningQuestions(uid string, pid int, questions []domain.ScreeningQuestionInput) (err error) {
+	tx, err := m.mysql_db.Begin()
+	if err != nil {
+		return errors.New("fail to save screening questions")
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var petID int
+	scanErr := tx.QueryRow(`
+		SELECT pet_id FROM Pets
+		WHERE pet_id = ? AND SUBSTRING_INDEX(pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
+		FOR UPDATE
+	`, pid, uid).Scan(&petID)
+	if scanErr != nil {
+		if scanErr == sql.ErrNoRows {
+			err = errors.New("pet not found or not owned by user")
+		} else {
+			err = scanErr
+		}
+		return err
+	}
+
+	var hasApplicants bool
+	if scanErr := tx.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM Pets_Rehoming WHERE rehome_petId = ?)
+	`, pid).Scan(&hasApplicants); scanErr != nil {
+		err = scanErr
+		return errors.New("fail to save screening questions")
+	}
+	if hasApplicants {
+		err = errors.New("screening questions are locked because this pet already has adoption applications")
+		return err
+	}
+
+	if _, execErr := tx.Exec(`DELETE FROM Pets_Screening_Questions WHERE question_petId = ?`, pid); execErr != nil {
+		err = execErr
+		return errors.New("fail to save screening questions")
+	}
+
+	for _, q := range questions {
+		optionsRaw, optionsErr := optionsValue(q.QuestionOptions)
+		if optionsErr != nil {
+			err = optionsErr
+			return errors.New("fail to save screening questions")
+		}
+		if _, execErr := tx.Exec(`
+			INSERT INTO Pets_Screening_Questions (
+				question_petId, question_type, question_text, question_options,
+				question_required, question_order
+			) VALUES (?, ?, ?, ?, ?, ?)
+		`, pid, q.QuestionType, q.QuestionText, optionsRaw, q.QuestionRequired, q.QuestionOrder); execErr != nil {
+			err = execErr
+			return errors.New("fail to save screening questions")
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return errors.New("fail to save screening questions")
+	}
+	return nil
 }
 
 func (m *MySQLPetAdapter) GetPetsByOwner(uid string) (petData []domain.PetsInfo, err error) {

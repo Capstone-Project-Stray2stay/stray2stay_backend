@@ -22,7 +22,7 @@ func (h *HttpPetHandler) Adopt(c *fiber.Ctx) error {
 		})
 	}
 
-	rid, err := h.service.AdoptPet(c.Context(), uid, petAdoptPayload.Pid, petAdoptPayload.Q1_1, petAdoptPayload.Q1_2, petAdoptPayload.Q1_3, petAdoptPayload.Q2_1, petAdoptPayload.Q2_2, petAdoptPayload.Q2_3, petAdoptPayload.Q3_1, petAdoptPayload.Q3_2, petAdoptPayload.Q3_3, petAdoptPayload.Q4_1, petAdoptPayload.Q5_1, petAdoptPayload.Q6_1, petAdoptPayload.Q6_2, petAdoptPayload.Note)
+	rid, err := h.service.AdoptPet(c.Context(), uid, petAdoptPayload.Pid, petAdoptPayload.Q1_1, petAdoptPayload.Q1_2, petAdoptPayload.Q1_3, petAdoptPayload.Q2_1, petAdoptPayload.Q2_2, petAdoptPayload.Q2_3, petAdoptPayload.Q3_1, petAdoptPayload.Q3_2, petAdoptPayload.Q3_3, petAdoptPayload.Q4_1, petAdoptPayload.Q5_1, petAdoptPayload.Q6_1, petAdoptPayload.Q6_2, petAdoptPayload.Note, petAdoptPayload.Answers)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),

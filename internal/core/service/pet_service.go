@@ -14,11 +14,12 @@ import (
 type PetService interface {
 	RegisterPet(ctx context.Context, uid string, petName string, files []*multipart.FileHeader, ageGroup string, gender string, petType string, breed string, color string, personality []string, specialCare string, sterilized bool, vaccination []string, address string, addressLat float64, addressLong float64, status string, note string) (pid int, err error)
 	UpdatePet(ctx context.Context, uid string, pid int, petName string, files []*multipart.FileHeader, existingImages []string, ageGroup string, gender string, petType string, breed string, color string, personality []string, specialCare string, sterilized bool, vaccination []string, address string, addressLat float64, addressLong float64, note string) (err error)
-	SearchPets(ctx context.Context, uid string, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, petLocation string, userLat float64, userLong float64) (petData []domain.PetsInfo, totalCount int, err error)
+	SearchPets(ctx context.Context, uid string, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, petLocation string, keyword string, userLat float64, userLong float64) (petData []domain.PetsInfo, totalCount int, err error)
 	PetInfo(ctx context.Context, pid int) (petData *domain.PetInfo, err error)
-	AdoptPet(ctx context.Context, uid string, pid int, q1_1 bool, q1_2 bool, q1_3 string, q2_1 string, q2_2 bool, q2_3 bool, q3_1 int8, q3_2 bool, q3_3 string, q4_1 int8, q5_1 int8, q6_1 int8, q6_2 int8, note string) (rid int, err error)
+	AdoptPet(ctx context.Context, uid string, pid int, q1_1 bool, q1_2 bool, q1_3 string, q2_1 string, q2_2 bool, q2_3 bool, q3_1 int8, q3_2 bool, q3_3 string, q4_1 int8, q5_1 int8, q6_1 int8, q6_2 int8, note string, answers []domain.CustomAnswerInput) (rid int, err error)
 	SelectPetAdopter(ctx context.Context, rid int, uid string) (err error)
 	AllBreeds(ctx context.Context, petType string) (breedData []string, err error)
+	AllBreedImages(ctx context.Context, petType string) (imageData []domain.PetBreedImageResponse, err error)
 	PetColor(ctx context.Context, petType string, petBreed string) (colorData []domain.PetColorResponse, err error)
 	PetRandom(ctx context.Context) (petData []domain.PetsInfo, err error)
 	PetBehavior(ctx context.Context, petType string, petBreed string) (behaviorData string, err error)
@@ -29,6 +30,9 @@ type PetService interface {
 	MyAdoptionStatus(ctx context.Context, uid string, pid int) (status string, err error)
 	MyAdoptionRequests(ctx context.Context, uid string) (requests []domain.MyAdoptionRequest, err error)
 	CancelAdoptionRequest(ctx context.Context, uid string, rid int) (err error)
+	GetScreeningQuestions(ctx context.Context, pid int) (questions []domain.CustomScreeningQuestion, locked bool, err error)
+	SaveScreeningQuestions(ctx context.Context, uid string, pid int, questions []domain.ScreeningQuestionInput) (err error)
+	UploadScreeningAnswerImage(ctx context.Context, uid string, file *multipart.FileHeader) (imageURL string, err error)
 }
 
 type PetServiceImpl struct {
@@ -111,14 +115,14 @@ func (s *PetServiceImpl) UpdatePet(ctx context.Context, uid string, pid int, pet
 	return nil
 }
 
-func (s *PetServiceImpl) SearchPets(ctx context.Context, uid string, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, petLocation string, userLat float64, userLong float64) (petData []domain.PetsInfo, totalCount int, err error) {
+func (s *PetServiceImpl) SearchPets(ctx context.Context, uid string, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, petLocation string, keyword string, userLat float64, userLong float64) (petData []domain.PetsInfo, totalCount int, err error) {
 	if uid != "" && userLat == 0 && userLong == 0 {
 		if userInfo, err := s.userRepo.GetUserInfo(uid); err == nil {
 			userLat, userLong = userInfo.AddressLat, userInfo.AddressLong
 		}
 	}
 
-	data, totalCount, err := s.mysqlRepo.GetPetsInfo(page, pageSize, petAgeGroup, petGender, petType, petBreed, petColor, petLocation, userLat, userLong)
+	data, totalCount, err := s.mysqlRepo.GetPetsInfo(page, pageSize, petAgeGroup, petGender, petType, petBreed, petColor, petLocation, keyword, userLat, userLong)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -138,12 +142,32 @@ func (s *PetServiceImpl) PetInfo(ctx context.Context, pid int) (petData *domain.
 	return &data, nil
 }
 
-func (s *PetServiceImpl) AdoptPet(ctx context.Context, uid string, pid int, q1_1 bool, q1_2 bool, q1_3 string, q2_1 string, q2_2 bool, q2_3 bool, q3_1 int8, q3_2 bool, q3_3 string, q4_1 int8, q5_1 int8, q6_1 int8, q6_2 int8, note string) (rid int, err error) {
-	rid, err = s.mysqlRepo.PostPetAdopt(uid, pid, q1_1, q1_2, q1_3, q2_1, q2_2, q2_3, q3_1, q3_2, q3_3, q4_1, q5_1, q6_1, q6_2, note)
+func (s *PetServiceImpl) AdoptPet(ctx context.Context, uid string, pid int, q1_1 bool, q1_2 bool, q1_3 string, q2_1 string, q2_2 bool, q2_3 bool, q3_1 int8, q3_2 bool, q3_3 string, q4_1 int8, q5_1 int8, q6_1 int8, q6_2 int8, note string, answers []domain.CustomAnswerInput) (rid int, err error) {
+	rid, err = s.mysqlRepo.PostPetAdopt(uid, pid, q1_1, q1_2, q1_3, q2_1, q2_2, q2_3, q3_1, q3_2, q3_3, q4_1, q5_1, q6_1, q6_2, note, answers)
 	if err != nil {
 		return rid, err
 	}
 	return rid, nil
+}
+
+func (s *PetServiceImpl) GetScreeningQuestions(ctx context.Context, pid int) (questions []domain.CustomScreeningQuestion, locked bool, err error) {
+	questions, locked, err = s.mysqlRepo.GetScreeningQuestions(pid)
+	if err != nil {
+		return nil, false, err
+	}
+	return questions, locked, nil
+}
+
+func (s *PetServiceImpl) SaveScreeningQuestions(ctx context.Context, uid string, pid int, questions []domain.ScreeningQuestionInput) (err error) {
+	return s.mysqlRepo.SaveScreeningQuestions(uid, pid, questions)
+}
+
+func (s *PetServiceImpl) UploadScreeningAnswerImage(ctx context.Context, uid string, file *multipart.FileHeader) (imageURL string, err error) {
+	urls, err := s.uploader.UploadImages([]*multipart.FileHeader{file}, "screening-answers")
+	if err != nil {
+		return "", err
+	}
+	return urls[0], nil
 }
 
 func (s *PetServiceImpl) SelectPetAdopter(ctx context.Context, rid int, uid string) (err error) {
@@ -160,6 +184,14 @@ func (s *PetServiceImpl) AllBreeds(ctx context.Context, petType string) (breedDa
 		return nil, err
 	}
 	return breeds, nil
+}
+
+func (s *PetServiceImpl) AllBreedImages(ctx context.Context, petType string) (imageData []domain.PetBreedImageResponse, err error) {
+	images, err := s.mongoRepo.GetBreedImages(petType)
+	if err != nil {
+		return nil, err
+	}
+	return images, nil
 }
 
 func (s *PetServiceImpl) PetColor(ctx context.Context, petType string, petBreed string) (colorData []domain.PetColorResponse, err error) {

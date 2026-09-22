@@ -106,3 +106,38 @@ func (m *MongoPetAdapter) GetBreedColors(petType string, petBreed string) (color
 	}
 	return result.PossibleColors, nil
 }
+
+func (m *MongoPetAdapter) GetBreedImages(petType string) (imageData []domain.PetBreedImageResponse, err error) {
+	var collectionName string
+	collectionName, err = parsePetType(petType)
+	if err != nil {
+		return nil, err
+	}
+	collection := m.collection.Database().Collection(collectionName)
+
+	opts := options.Find().SetProjection(bson.M{"breedName": 1, "possibleColors": 1})
+	cursor, err := collection.Find(context.Background(), bson.M{}, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var breeds []struct {
+		BreedName      string                    `bson:"breedName"`
+		PossibleColors []domain.PetColorResponse `bson:"possibleColors"`
+	}
+	if err := cursor.All(context.Background(), &breeds); err != nil {
+		return nil, err
+	}
+
+	imageData = make([]domain.PetBreedImageResponse, 0, len(breeds))
+	for _, breed := range breeds {
+		image := ""
+		if len(breed.PossibleColors) > 0 {
+			image = breed.PossibleColors[0].Image
+		}
+		imageData = append(imageData, domain.PetBreedImageResponse{Breed: breed.BreedName, Image: image})
+	}
+
+	return imageData, nil
+}

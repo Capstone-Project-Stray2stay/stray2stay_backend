@@ -13,7 +13,7 @@ type PetRegisterRequest struct {
 	PetPersonality []string `form:"petPersonality" validate:"required,min=1"`
 	PetSpecialCare string   `form:"petSpecialCare"`
 	PetSterilized  bool     `form:"petSterilized"`
-	PetVaccination []string `form:"petVaccination" validate:"required,min=1,dive,oneof=DHPPi Rabies FVRCP"`
+	PetVaccination []string `form:"petVaccination" validate:"dive,oneof=DHPPi Rabies FVRCP"`
 	PetAddress     string   `form:"petAddress" validate:"required"`
 	PetAddressLat  float64  `form:"petAddressLat" validate:"required"`
 	PetAddressLong float64  `form:"petAddressLong" validate:"required"`
@@ -36,7 +36,7 @@ type PetUpdateRequest struct {
 	PetPersonality []string `form:"petPersonality" validate:"required,min=1"`
 	PetSpecialCare string   `form:"petSpecialCare"`
 	PetSterilized  bool     `form:"petSterilized"`
-	PetVaccination []string `form:"petVaccination" validate:"required,min=1,dive,oneof=DHPPi Rabies FVRCP"`
+	PetVaccination []string `form:"petVaccination" validate:"dive,oneof=DHPPi Rabies FVRCP"`
 	PetAddress     string   `form:"petAddress" validate:"required"`
 	PetAddressLat  float64  `form:"petAddressLat" validate:"required"`
 	PetAddressLong float64  `form:"petAddressLong" validate:"required"`
@@ -91,6 +91,7 @@ type PetSearchFilterRequest struct {
 	PetBreed    string  `query:"petBreed"`
 	PetColor    string  `query:"petColor"`
 	PetLocation string  `query:"petLocation"`
+	Keyword     string  `query:"keyword"`
 	UserLat     float64 `query:"userLat"`
 	UserLong    float64 `query:"userLong"`
 }
@@ -136,6 +137,60 @@ type PetAdoptRequest struct {
 	Q6_1 int8   `json:"q6_1" validate:"gte=0,lte=4"`
 	Q6_2 int8   `json:"q6_2" validate:"gte=0,lte=4"`
 	Note string `json:"note"`
+
+	Answers []CustomAnswerInput `json:"answers"`
+}
+
+// ScreeningQuestionInput is one custom question defined by a pet owner, sent
+// as part of a full-set replace (see SaveScreeningQuestionsRequest).
+type ScreeningQuestionInput struct {
+	QuestionType     string   `json:"questionType" validate:"required,oneof=CHECKLIST MULTIPLE_CHOICE ESSAY IMAGE"`
+	QuestionText     string   `json:"questionText" validate:"required"`
+	QuestionOptions  []string `json:"questionOptions"`
+	QuestionRequired bool     `json:"questionRequired"`
+	QuestionOrder    int      `json:"questionOrder"`
+}
+
+type SaveScreeningQuestionsRequest struct {
+	Questions []ScreeningQuestionInput `json:"questions" validate:"dive"`
+}
+
+type SaveScreeningQuestionsResponse struct {
+	Message string `json:"message"`
+}
+
+// CustomScreeningQuestion is one custom question as returned to callers
+// (adopters filling the form, or the owner managing it).
+type CustomScreeningQuestion struct {
+	QuestionID       int      `json:"questionId"`
+	QuestionType     string   `json:"questionType"`
+	QuestionText     string   `json:"questionText"`
+	QuestionOptions  []string `json:"questionOptions,omitempty"`
+	QuestionRequired bool     `json:"questionRequired"`
+	QuestionOrder    int      `json:"questionOrder"`
+}
+
+type GetScreeningQuestionsResponse struct {
+	Questions []CustomScreeningQuestion `json:"questions"`
+	Locked    bool                      `json:"locked"`
+	Message   string                    `json:"message"`
+}
+
+// CustomAnswerInput is an adopter's answer to one custom question, submitted
+// alongside the fixed Q1_1..Q6_2 answers in PetAdoptRequest.
+type CustomAnswerInput struct {
+	QuestionID int             `json:"questionId" validate:"required,gt=0"`
+	Value      json.RawMessage `json:"value" validate:"required"`
+}
+
+// CustomAnswerResponse pairs a submitted answer back with its question's
+// text/type so the owner's screening-answer view can render it without a
+// second lookup.
+type CustomAnswerResponse struct {
+	QuestionID   int             `json:"questionId"`
+	QuestionText string          `json:"questionText"`
+	QuestionType string          `json:"questionType"`
+	Value        json.RawMessage `json:"value"`
 }
 
 type PetAdoptResponse struct {
@@ -176,6 +231,11 @@ type PetColorResponse struct {
 
 type PetBreed struct {
 	BreedName string `bson:"breedName"`
+}
+
+type PetBreedImageResponse struct {
+	Breed string `json:"breed"`
+	Image string `json:"image"`
 }
 
 type PetGetBreedsRequest struct {
@@ -244,4 +304,11 @@ type ScreeningAnswer struct {
 	Q6_1 int8
 	Q6_2 int8
 	Note string
+
+	CustomAnswers []CustomAnswerResponse
+}
+
+type UploadScreeningAnswerImageResponse struct {
+	ImageURL string `json:"imageUrl"`
+	Message  string `json:"message"`
 }

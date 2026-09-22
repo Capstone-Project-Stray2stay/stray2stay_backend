@@ -33,7 +33,7 @@ func (h *HttpPetHandler) PetSearchFilter(c *fiber.Ctx) error {
 
 	uid, _ := c.Locals("uid").(string)
 
-	petData, totalCount, err := h.service.SearchPets(context.Background(), uid, petSearchFilterPayload.Page, petSearchFilterPayload.PageSize, petSearchFilterPayload.PetAgeGroup, petSearchFilterPayload.PetGender, petSearchFilterPayload.PetType, petSearchFilterPayload.PetBreed, petSearchFilterPayload.PetColor, petSearchFilterPayload.PetLocation, petSearchFilterPayload.UserLat, petSearchFilterPayload.UserLong)
+	petData, totalCount, err := h.service.SearchPets(context.Background(), uid, petSearchFilterPayload.Page, petSearchFilterPayload.PageSize, petSearchFilterPayload.PetAgeGroup, petSearchFilterPayload.PetGender, petSearchFilterPayload.PetType, petSearchFilterPayload.PetBreed, petSearchFilterPayload.PetColor, petSearchFilterPayload.PetLocation, petSearchFilterPayload.Keyword, petSearchFilterPayload.UserLat, petSearchFilterPayload.UserLong)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Error to get all pets data",
