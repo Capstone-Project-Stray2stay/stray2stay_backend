@@ -34,3 +34,27 @@ func AuthRequired(c *fiber.Ctx) error {
 	c.Locals("uid", uid)
 	return c.Next()
 }
+
+func OptionalAuth(c *fiber.Ctx) error {
+	cookie := c.Cookies("token")
+	if cookie == "" {
+		return c.Next()
+	}
+
+	token, err := jwt.Parse(cookie, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+	if err != nil || !token.Valid {
+		return c.Next()
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return c.Next()
+	}
+
+	if uid, ok := claims["uid"].(string); ok {
+		c.Locals("uid", uid)
+	}
+	return c.Next()
+}

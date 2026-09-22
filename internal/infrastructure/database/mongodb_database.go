@@ -3,20 +3,19 @@ package database
 import (
 	"context"
 	"log"
-	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/S-nudhana/stray2stay/internal/infrastructure/config"
 )
 
-func NewMongoDatabase() (*mongo.Client, error) {
-	uri := os.Getenv("MONGO_DB_URI") 
-
+func NewMongoDatabase(cfg config.MongoConfig) (*mongo.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	clientOptions := options.Client().ApplyURI(uri)
+	clientOptions := options.Client().ApplyURI(cfg.URI)
 
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {

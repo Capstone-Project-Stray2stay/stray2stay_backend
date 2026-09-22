@@ -2,8 +2,10 @@ package user
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -14,13 +16,6 @@ import (
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 )
 
-// BeginOAuth godoc
-// @Summary Start OAuth login
-// @Description Redirect user to OAuth provider
-// @Tags users
-// @Param provider path string true "OAuth Provider"
-// @Success 302 {string} string
-// @Router /api/user/oauth/{provider} [get]
 func (h *HttpUserHandler) BeginOAuth(c *fiber.Ctx) error {
 	provider := c.Params("provider")
 
@@ -33,29 +28,39 @@ func (h *HttpUserHandler) BeginOAuth(c *fiber.Ctx) error {
 	})(c)
 }
 
-// OAuthCallback godoc
-// @Summary OAuth callback
-// @Description Handle OAuth provider callback
-// @Tags users
-// @Param provider path string true "OAuth Provider"
-// @Success 302 {string} string
-// @Router /api/user/oauth/{provider}/callback [get]
 func (h *HttpUserHandler) OAuthCallback(c *fiber.Ctx) error {
+	provider := c.Params("provider")
+
 	return adaptor.HTTPHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, err := gothic.CompleteUserAuth(w, r)
+		q := r.URL.Query()
+		q.Set("provider", provider)
+		r.URL.RawQuery = q.Encode()
+
+		gothUser, err := gothic.CompleteUserAuth(w, r)
 		if err != nil {
+			log.Printf("[OAuthCallback] CompleteUserAuth error: %v", err)
 			http.Error(w, "OAuth failed", http.StatusUnauthorized)
 			return
 		}
 
+		firstName, lastName := gothUser.FirstName, gothUser.LastName
+		if firstName == "" && lastName == "" && gothUser.Name != "" {
+			parts := strings.SplitN(gothUser.Name, " ", 2)
+			firstName = parts[0]
+			if len(parts) > 1 {
+				lastName = parts[1]
+			}
+		}
+
 		uid, err := h.service.OAuthLogin(
 			r.Context(),
-			user.Email,
-			user.Provider,
-			user.FirstName,
-			user.LastName,
+			gothUser.Email,
+			"OAUTH",
+			firstName,
+			lastName,
 		)
 		if err != nil {
+			log.Printf("[OAuthCallback] OAuthLogin error: %v", err)
 			http.Error(w, "OAuth failed", http.StatusUnauthorized)
 			return
 		}
@@ -68,6 +73,7 @@ func (h *HttpUserHandler) OAuthCallback(c *fiber.Ctx) error {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		signed, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 		if err != nil {
+			log.Printf("[OAuthCallback] JWT signing error: %v", err)
 			http.Error(w, "Token error", http.StatusInternalServerError)
 			return
 		}
@@ -79,22 +85,13 @@ func (h *HttpUserHandler) OAuthCallback(c *fiber.Ctx) error {
 			HttpOnly: true,
 			Secure:   os.Getenv("ENV") == "production",
 			Path:     "/",
-			SameSite: http.SameSiteStrictMode,
+			SameSite: http.SameSiteLaxMode,
 		})
 
 		http.Redirect(w, r, os.Getenv("ORIGIN"), http.StatusFound)
 	})(c)
 }
 
-// Login godoc
-// @Summary Login user
-// @Description Login using email and password
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param credentials body domain.UserLoginRequest true "Login Payload"
-// @Success 200 {object} domain.UserLoginResponse
-// @Router /api/user/login [post]
 func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 	userLoginPayload := new(domain.UserLoginRequest)
 	if err := c.BodyParser(userLoginPayload); err != nil {
@@ -108,14 +105,12 @@ func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 			"error": "Incorrect request format",
 		})
 	}
-
 	uid, err := h.service.Login(context.Background(), userLoginPayload.Email, userLoginPayload.Password)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
-
 	claims := jwt.MapClaims{
 		"uid": uid,
 		"exp": time.Now().Add(72 * time.Hour).Unix(),
@@ -142,18 +137,8 @@ func (h *HttpUserHandler) Login(c *fiber.Ctx) error {
 	})
 }
 
-// Register godoc
-// @Summary Register user
-// @Description Create new user account
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param user body domain.UserRegisterRequest true "Register Payload"
-// @Success 200 {object} domain.UserRegisterResponse
-// @Router /api/user/register [post]
 func (h *HttpUserHandler) Register(c *fiber.Ctx) error {
 	userRegisterPayload := new(domain.UserRegisterRequest)
-
 	if err := c.BodyParser(userRegisterPayload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request payload",
@@ -178,12 +163,6 @@ func (h *HttpUserHandler) Register(c *fiber.Ctx) error {
 	})
 }
 
-// DeleteUser godoc
-// @Summary Delete user
-// @Description Delete authenticated user
-// @Tags users
-// @Success 200 {object} domain.UserDeleteResponse
-// @Router /api/user/delete [delete]
 func (h *HttpUserHandler) DeleteUser(c *fiber.Ctx) error {
 	uid := c.Locals("uid").(string)
 
@@ -196,5 +175,71 @@ func (h *HttpUserHandler) DeleteUser(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"message": "User deleted successfully",
+	})
+}
+
+func (h *HttpUserHandler) Logout(c *fiber.Ctx) error {
+	c.Cookie(&fiber.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Now().Add(-time.Hour),
+		HTTPOnly: true,
+		SameSite: "Strict",
+		Secure:   os.Getenv("ENV") == "production",
+	})
+	return c.JSON(fiber.Map{"message": "Logged out"})
+}
+
+func (h *HttpUserHandler) Authorize(c *fiber.Ctx) error {
+	cookie := c.Cookies("token")
+	if cookie == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"authorized":     false,
+			"userFirstname":  "",
+			"userCoverImage": "",
+		})
+	}
+
+	token, err := jwt.Parse(cookie, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+	if err != nil || !token.Valid {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"authorized":     false,
+			"userFirstname":  "",
+			"userCoverImage": "",
+		})
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"authorized":     false,
+			"userFirstname":  "",
+			"userCoverImage": "",
+		})
+	}
+
+	uid, ok := claims["uid"].(string)
+	if !ok || uid == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"authorized":     false,
+			"userFirstname":  "",
+			"userCoverImage": "",
+		})
+	}
+
+	userInfo, err := h.service.UserInfo(context.Background(), uid)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"authorized":     true,
+		"userFirstname":  userInfo.Firstname,
+		"userCoverImage": userInfo.CoverImage,
 	})
 }

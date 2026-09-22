@@ -1,0 +1,163 @@
+CREATE TABLE `Users`(
+    `user_id`           VARCHAR(45) NOT NULL,
+    `user_email`        VARCHAR(40) NOT NULL,
+    `user_imageAddress` TEXT NULL,
+    `user_firstname`    VARCHAR(30) NOT NULL,
+    `user_lastname`     VARCHAR(30) NOT NULL,
+    `user_phoneNumber`  TEXT NOT NULL,
+    `user_address`      TEXT NOT NULL,
+    `user_addressLat`   DOUBLE NOT NULL,
+    `user_addressLong`  DOUBLE NOT NULL,
+    `user_authType`     ENUM('PASS', 'OAUTH') NOT NULL,
+    `user_newUser`      BOOLEAN NOT NULL DEFAULT TRUE,
+    `user_updateAt`     DATETIME NOT NULL,
+    `user_createAt`     DATETIME NOT NULL,
+    PRIMARY KEY(`user_id`)
+);
+
+ALTER TABLE `Users`
+    ADD UNIQUE `users_user_email_unique`(`user_email`);
+
+CREATE TABLE `Users_Password`(
+    `password_id`     BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `password_userId` VARCHAR(45) NOT NULL,
+    `password_pass`   TEXT NOT NULL,
+    CONSTRAINT `users_password_password_userid_foreign`
+        FOREIGN KEY(`password_userId`) REFERENCES `Users`(`user_id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE `Users_Preferences`(
+    `pref_id`       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `pref_userId`   VARCHAR(45) NOT NULL,
+    `pref_petType`  ENUM('CAT', 'DOG') NULL,
+    `pref_breed`    TEXT NULL,
+    `pref_ageGroup` ENUM('BABY', 'JUVENILE', 'MATURE', 'SENIOR') NULL,
+    `pref_color`    TEXT NULL,
+    `pref_gender`   ENUM('MALE', 'FEMALE') NULL,
+    CONSTRAINT `users_preferences_pref_userid_foreign`
+        FOREIGN KEY(`pref_userId`) REFERENCES `Users`(`user_id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE `Pets`(
+    `pet_id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `pet_ownerId`     VARCHAR(45) NOT NULL,
+    `pet_name`        VARCHAR(30) NULL,
+    `pet_imageAddress` TEXT NOT NULL,
+    `pet_ageGroup`    ENUM('BABY', 'JUVENILE', 'MATURE', 'SENIOR') NOT NULL,
+    `pet_gender`      ENUM('MALE', 'FEMALE') NULL,
+    `pet_type`        ENUM('DOG', 'CAT') NOT NULL,
+    `pet_breed`       VARCHAR(20) NOT NULL,
+    `pet_color`       VARCHAR(20) NOT NULL,
+    `pet_personality` JSON NULL,
+    `pet_specialCare` JSON NULL,
+    `pet_sterilized`  BOOLEAN NULL,
+    `pet_vaccination` SET('DHPPi', 'Rabies', 'FVRCP') NULL,
+    `pet_address`     TEXT NOT NULL,
+    `pet_addressLat`  BIGINT NOT NULL,
+    `pet_addressLong` BIGINT NOT NULL,
+    `pet_status`      ENUM('ADOPTED', 'AVALIABLE') NOT NULL,
+    `pet_note`        TEXT NULL,
+    `pet_createAt`    DATETIME NOT NULL,
+    `pet_updateAt`    DATETIME NOT NULL,
+    CONSTRAINT `pets_pet_ownerid_foreign`
+        FOREIGN KEY(`pet_ownerId`) REFERENCES `Users`(`user_id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE `Pets_Rehoming`(
+    `rehome_id`           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `rehome_petId`        BIGINT UNSIGNED NOT NULL,
+    `rehome_adoptorId`    VARCHAR(45) NULL,
+    `rehome_status`       ENUM('PENDING', 'DENIED', 'ACCEPT') NOT NULL,
+    `rehome_contact`      TEXT NOT NULL,
+    `rehome_Q1_1`         BOOLEAN NOT NULL,
+    `rehome_Q1_2`         BOOLEAN NOT NULL,
+    `rehome_Q1_3`         TEXT NOT NULL,
+    `rehome_Q2_1`         ENUM('House','Townhouse','Condo','Apartment / Dormitory') NOT NULL,
+    `rehome_Q2_2`         BOOLEAN NOT NULL,
+    `rehome_Q2_3`         BOOLEAN NOT NULL,
+    `rehome_Q3_1`         TINYINT NOT NULL,
+    `rehome_Q3_2`         BOOLEAN NOT NULL,
+    `rehome_Q3_3`         TEXT NOT NULL,
+    `rehome_Q4_1`         TINYINT NOT NULL,
+    `rehome_Q5_1`         TINYINT NOT NULL,
+    `rehome_Q6_1`         TINYINT NOT NULL,
+    `rehome_Q6_2`         TINYINT NOT NULL,
+    `rehome_note`         TEXT NOT NULL,
+    `rehome_createAt`     DATETIME NOT NULL,
+    `rehome_updateAt`     DATETIME NOT NULL,
+    CONSTRAINT `pets_rehoming_rehome_petid_foreign`
+        FOREIGN KEY(`rehome_petId`) REFERENCES `Pets`(`pet_id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT `pets_rehoming_rehome_adoptorid_foreign`
+        FOREIGN KEY(`rehome_adoptorId`) REFERENCES `Users`(`user_id`)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE `Pets_Diary`(
+    `id`                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `diary_petId`  BIGINT UNSIGNED NOT NULL,
+    `diary_imagesAddress` JSON NULL,
+    `diary_note`          TEXT NULL,
+    `diary_createAt`      DATETIME NOT NULL,
+    `diary_updateAt`      DATETIME NOT NULL,
+    CONSTRAINT `pets_diary_diary_petid_foreign`
+        FOREIGN KEY(`diary_petId`) REFERENCES `Pets`(`pet_id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE `Pets_Screening_Questions`(
+    `question_id`       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `question_petId`    BIGINT UNSIGNED NOT NULL,
+    `question_type`     ENUM('CHECKLIST', 'MULTIPLE_CHOICE', 'ESSAY', 'IMAGE') NOT NULL,
+    `question_text`     TEXT NOT NULL,
+    `question_options`  JSON NULL,
+    `question_required` BOOLEAN NOT NULL DEFAULT TRUE,
+    `question_order`    INT NOT NULL DEFAULT 0,
+    `question_createAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `question_updateAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `pets_screening_questions_question_petid_foreign`
+        FOREIGN KEY(`question_petId`) REFERENCES `Pets`(`pet_id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE `Pets_Rehoming_Answers`(
+    `answer_id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `answer_rehomeId`   BIGINT UNSIGNED NOT NULL,
+    `answer_questionId` BIGINT UNSIGNED NOT NULL,
+    `answer_value`      JSON NOT NULL,
+    CONSTRAINT `pets_rehoming_answers_answer_rehomeid_foreign`
+        FOREIGN KEY(`answer_rehomeId`) REFERENCES `Pets_Rehoming`(`rehome_id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT `pets_rehoming_answers_answer_questionid_foreign`
+        FOREIGN KEY(`answer_questionId`) REFERENCES `Pets_Screening_Questions`(`question_id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    UNIQUE `pets_rehoming_answers_rehome_question_unique`(`answer_rehomeId`, `answer_questionId`)
+);
+
+ALTER TABLE `Users`
+    MODIFY `user_updateAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    MODIFY `user_createAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE `Pets`
+    MODIFY `pet_createAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    MODIFY `pet_updateAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+ALTER TABLE `Pets_Rehoming`
+    MODIFY `rehome_createAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    MODIFY `rehome_updateAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+ALTER TABLE `Pets_Diary`
+    MODIFY `diary_createAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    MODIFY `diary_updateAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;

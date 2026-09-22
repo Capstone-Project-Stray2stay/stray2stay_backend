@@ -14,9 +14,14 @@ func UserRouter(app *fiber.App, userHandler *user.HttpUserHandler) {
 	user.Post("/register", userHandler.Register)
 	user.Get("/oauth/:provider", userHandler.BeginOAuth)
 	user.Get("/oauth/:provider/callback", userHandler.OAuthCallback)
-
+	user.Get("/authorize", userHandler.Authorize)
+	
 	authUser := user.Group("", middleware.AuthRequired)
+	authUser.Post("/logout", userHandler.Logout)
+	authUser.Get("/status", userHandler.NewUserStatus)
+	authUser.Put("/status", userHandler.UpdateNewUserStatus)
 	authUser.Delete("/delete", userHandler.DeleteUser)
 	authUser.Put("/update", userHandler.UpdateUser)
+	authUser.Put("/image", userHandler.UpdateUserImage)
 	authUser.Get("/info", userHandler.UserInfo)
 }

@@ -7,9 +7,9 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"time"
-	"strings"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -93,7 +93,14 @@ func (h *HttpPetHandler) AIClassify(c *fiber.Ctx) error {
 	if err := json.Unmarshal(respBody, &aiResp); err != nil {
 		return err
 	}
-	detectedBreed := aiResp.PetBreed
+
+	if len(aiResp.Predictions) == 0 {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "No predictions returned",
+		})
+	}
+
+	detectedBreed := aiResp.Predictions[0].Label
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"pet_breed": detectedBreed,
 	})
