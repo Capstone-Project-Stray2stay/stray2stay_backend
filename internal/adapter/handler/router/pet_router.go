@@ -17,6 +17,8 @@ func PetRouter(app *fiber.App, petHandler *pet.HttpPetHandler) {
 	pet.Get("/breed/behavior", petHandler.PetBehavior)
 	pet.Get("/mine", middleware.AuthRequired, petHandler.MyPets)
 	pet.Get("/mine/adoptions", middleware.AuthRequired, petHandler.MyAdoptionRequests)
+	// Registered before "/:pid" so "mine" is never parsed as a pet id.
+	pet.Get("/mine/diaries", middleware.AuthRequired, petHandler.MyDiaryPets)
 	pet.Delete("/mine/adoptions/:rid", middleware.AuthRequired, petHandler.CancelAdoptionRequest)
 	pet.Get("/:pid", middleware.OptionalAuth, petHandler.PetInfo)
 	pet.Get("", middleware.OptionalAuth, petHandler.PetSearchFilter)
@@ -29,6 +31,10 @@ func PetRouter(app *fiber.App, petHandler *pet.HttpPetHandler) {
 	authPet.Get("/:pid/screening-answer", petHandler.ScreeningAnswerAdoptor)
 	authPet.Put("/:pid/screening-questions", petHandler.SaveScreeningQuestions)
 	authPet.Post("/:pid/screening-answer-image", petHandler.UploadScreeningAnswerImage)
+
+	authPet.Get("/:pid/diary", petHandler.DiaryEntries)
+	authPet.Put("/:pid/diary/:date", petHandler.SaveDiaryEntry)
+	authPet.Delete("/:pid/diary/:date", petHandler.DeleteDiaryEntry)
 
 	authPet.Post("/:pid/select-adopter", petHandler.SelectAdopter)
 	authPet.Post("/:pid/adopt", petHandler.Adopt)
