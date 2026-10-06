@@ -33,11 +33,14 @@ type PetService interface {
 	GetScreeningQuestions(ctx context.Context, pid int) (questions []domain.CustomScreeningQuestion, locked bool, err error)
 	SaveScreeningQuestions(ctx context.Context, uid string, pid int, questions []domain.ScreeningQuestionInput) (err error)
 	UploadScreeningAnswerImage(ctx context.Context, uid string, file *multipart.FileHeader) (imageURL string, err error)
+<<<<<<< HEAD
+=======
 
 	MyDiaryPets(ctx context.Context, uid string) (pets []domain.DiaryPet, err error)
 	DiaryEntries(ctx context.Context, uid string, pid int, from string, to string) (entries []domain.DiaryEntry, role string, since string, err error)
 	SaveDiaryEntry(ctx context.Context, uid string, pid int, date string, file *multipart.FileHeader, caption string) (entry domain.DiaryEntry, err error)
 	DeleteDiaryEntry(ctx context.Context, uid string, pid int, date string) (err error)
+>>>>>>> origin/main
 }
 
 type PetServiceImpl struct {

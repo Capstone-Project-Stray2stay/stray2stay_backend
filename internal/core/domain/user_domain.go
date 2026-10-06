@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 type UserRegisterRequest struct {
 	Email     string `json:"email" validate:"required,email"`
 	Password  string `json:"password" validate:"required,min=8"`
@@ -73,6 +75,20 @@ type UserDeleteResponse struct {
 	Message string `json:"message"`
 }
 
+<<<<<<< HEAD
+type Notification struct {
+	ID        int       `json:"id"`
+	Type      string    `json:"type"`
+	Title     string    `json:"title"`
+	Message   string    `json:"message"`
+	PetID     *int      `json:"petId,omitempty"`
+	RehomeID  *int      `json:"rehomeId,omitempty"`
+	IsRead    bool      `json:"isRead"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+=======
+>>>>>>> origin/main
 type AdoptorInfo struct {
 	UserID       string `json:"userId"`
 	Firstname    string `json:"firstName"`

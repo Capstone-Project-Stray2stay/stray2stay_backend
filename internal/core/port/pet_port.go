@@ -23,6 +23,8 @@ type PetSQLRepository interface {
 	CancelAdoptionRequest(uid string, rid int) (err error)
 	GetScreeningQuestions(pid int) (questions []domain.CustomScreeningQuestion, locked bool, err error)
 	SaveScreeningQuestions(uid string, pid int, questions []domain.ScreeningQuestionInput) (err error)
+<<<<<<< HEAD
+=======
 
 	GetMyDiaryPets(uid string) (pets []domain.DiaryPet, err error)
 	// GetDiaryAccess reports how uid relates to the pet. Returns an error when
@@ -35,6 +37,7 @@ type PetSQLRepository interface {
 	// replaced image URL comes back so the service can clean up storage.
 	UpsertDiaryEntry(pid int, uid string, date string, imageAddress string, caption string) (entry domain.DiaryEntry, replacedImage string, err error)
 	DeleteDiaryEntry(pid int, date string) (removedImage string, err error)
+>>>>>>> origin/main
 }
 type PetMongoRepository interface {
 	GetBreeds(petType string) (breedData []string, err error)

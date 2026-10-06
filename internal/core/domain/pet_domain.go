@@ -289,6 +289,8 @@ type PetCancelAdoptionResponse struct {
 	Message string `json:"message"`
 }
 
+<<<<<<< HEAD
+=======
 // DiaryRole says how the caller is connected to the pet. Only ADOPTER may
 // write; FINDER (the user who rehomed it) gets read-only access.
 const (
@@ -356,6 +358,7 @@ type PetDiaryDeleteResponse struct {
 	Message string `json:"message"`
 }
 
+>>>>>>> origin/main
 type ScreeningAnswer struct {
 	Q1_1 bool
 	Q1_2 bool

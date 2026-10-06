@@ -13,4 +13,14 @@ type UserMySQLRepository interface {
 	GetUserInfo(uid string) (userInfo *domain.UserInfo, err error)
 	GetNewUserStatus(uid string) (userStatus bool, err error)
 	UpdateNewUserStatus(uid string) (userStatus bool, err error)
+<<<<<<< HEAD
 }
+
+type NotificationRepository interface {
+	GetNotifications(uid string) (notifications []domain.Notification, unreadCount int, err error)
+	MarkNotificationRead(uid string, notificationID int) error
+	MarkAllNotificationsRead(uid string) error
+}
+=======
+}
+>>>>>>> origin/main
