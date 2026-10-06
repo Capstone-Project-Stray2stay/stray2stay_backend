@@ -13,6 +13,7 @@ import (
 	"github.com/markbates/goth/providers/google"
 
 	adapter "github.com/S-nudhana/stray2stay/internal/adapter/database"
+	httpNotificationHandler "github.com/S-nudhana/stray2stay/internal/adapter/handler/http/notification"
 	httpPetHandler "github.com/S-nudhana/stray2stay/internal/adapter/handler/http/pet"
 	httpUserHandler "github.com/S-nudhana/stray2stay/internal/adapter/handler/http/user"
 	"github.com/S-nudhana/stray2stay/internal/adapter/handler/router"
@@ -88,19 +89,29 @@ func main() {
 	userRepo := adapter.NewMySQLUserAdapter(mysql_db)
 	userService := service.NewUserService(userRepo, uploader)
 	userHandler := httpUserHandler.NewHttpUserHandler(userService)
+	notificationRepo := adapter.NewMySQLNotificationAdapter(mysql_db)
+	notificationService := service.NewNotificationService(notificationRepo)
+	notificationHandler := httpNotificationHandler.NewHttpNotificationHandler(notificationService)
 
 	mysqlPetRepo := adapter.NewMySQLPetAdapter(mysql_db)
 	mongoPetRepo := adapter.NewMongoPetAdapter(mongo_db)
 	petService := service.NewPetService(mysqlPetRepo, mongoPetRepo, uploader, userRepo)
 	petHandler := httpPetHandler.NewHttpPetHandler(petService)
 
-	app.Get("/api/test", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "API is working!"})
-	})
-	app.Get("/api/swagger/*", fiberSwagger.WrapHandler)
+	if cfg.Server.IsProduction() {
+		router.UserRouter(app, userHandler)
+		router.PetRouter(app, petHandler)
+		router.NotificationRouter(app, notificationHandler)
+	} else {
+		app.Get("/api/test", func(c *fiber.Ctx) error {
+			return c.JSON(fiber.Map{"message": "API is working!"})
+		})
+		app.Get("/api/swagger/*", fiberSwagger.WrapHandler)
 
-	router.UserRouter(app, userHandler)
-	router.PetRouter(app, petHandler)
+		router.UserRouter(app, userHandler)
+		router.PetRouter(app, petHandler)
+		router.NotificationRouter(app, notificationHandler)
+	}
 
 	log.Printf("Server running at http://localhost%s\n", cfg.Server.Addr)
 
