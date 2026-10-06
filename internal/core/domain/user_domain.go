@@ -75,6 +75,7 @@ type UserDeleteResponse struct {
 	Message string `json:"message"`
 }
 
+<<<<<<< HEAD
 type Notification struct {
 	ID        int       `json:"id"`
 	Type      string    `json:"type"`
@@ -86,6 +87,8 @@ type Notification struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+=======
+>>>>>>> origin/main
 type AdoptorInfo struct {
 	UserID       string `json:"userId"`
 	Firstname    string `json:"firstName"`

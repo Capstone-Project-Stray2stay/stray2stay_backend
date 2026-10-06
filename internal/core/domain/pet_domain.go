@@ -289,6 +289,76 @@ type PetCancelAdoptionResponse struct {
 	Message string `json:"message"`
 }
 
+<<<<<<< HEAD
+=======
+// DiaryRole says how the caller is connected to the pet. Only ADOPTER may
+// write; FINDER (the user who rehomed it) gets read-only access.
+const (
+	DiaryRoleAdopter = "ADOPTER"
+	DiaryRoleFinder  = "FINDER"
+)
+
+// DiaryPet is one pet whose diary the caller can open, carrying everything the
+// diary page renders: the pet card, the counterpart contact card, and the
+// earliest date an entry may be backdated to.
+type DiaryPet struct {
+	Pid             int      `json:"pid"`
+	PetName         string   `json:"petName"`
+	PetImageAddress []string `json:"petImageAddress"`
+	PetAgeGroup     string   `json:"petAgeGroup"`
+	PetGender       string   `json:"petGender"`
+	PetBreed        string   `json:"petBreed"`
+	PetColor        string   `json:"petColor"`
+	Role            string   `json:"role"`
+	CanWrite        bool     `json:"canWrite"`
+	// Earliest writable day, as YYYY-MM-DD — the date the adoption request
+	// that was ultimately accepted was made.
+	Since string `json:"since"`
+	// The other party: the finder when the caller adopted, the adopter when
+	// the caller rehomed.
+	CounterpartName  string `json:"counterpartName"`
+	CounterpartRole  string `json:"counterpartRole"`
+	CounterpartPhone string `json:"counterpartPhone"`
+	CounterpartImage string `json:"counterpartImage"`
+}
+
+type PetMyDiariesResponse struct {
+	DiaryPets []DiaryPet `json:"diaryPets"`
+	Message   string     `json:"message"`
+}
+
+// DiaryEntry is a single day's photo and caption.
+type DiaryEntry struct {
+	Did int `json:"did"`
+	Pid int `json:"pid"`
+	// YYYY-MM-DD, formatted in the server's local zone by the adapter.
+	Date         string `json:"date"`
+	ImageAddress string `json:"imageAddress"`
+	Caption      string `json:"caption"`
+}
+
+type PetDiaryEntriesResponse struct {
+	Entries []DiaryEntry `json:"entries"`
+	Message string       `json:"message"`
+}
+
+// DiarySaveRequest is the multipart body of an upsert. The photo travels in the
+// "image" file field and is optional when an entry for that day already has
+// one — editing only the caption must not force a re-upload.
+type DiarySaveRequest struct {
+	Caption string `form:"caption"`
+}
+
+type PetDiarySaveResponse struct {
+	Entry   DiaryEntry `json:"entry"`
+	Message string     `json:"message"`
+}
+
+type PetDiaryDeleteResponse struct {
+	Message string `json:"message"`
+}
+
+>>>>>>> origin/main
 type ScreeningAnswer struct {
 	Q1_1 bool
 	Q1_2 bool

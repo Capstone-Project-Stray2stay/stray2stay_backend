@@ -93,10 +93,16 @@ func (m *MySQLPetAdapter) UpdatePet(
 	if err != nil {
 		return nil, errors.New("fail to update pet")
 	}
+<<<<<<< HEAD
 	committed := false
 	defer func() {
 		if !committed {
 			_ = tx.Rollback()
+=======
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+>>>>>>> origin/main
 		}
 	}()
 
@@ -166,7 +172,10 @@ func (m *MySQLPetAdapter) UpdatePet(
 	if err = tx.Commit(); err != nil {
 		return nil, errors.New("fail to update pet")
 	}
+<<<<<<< HEAD
 	committed = true
+=======
+>>>>>>> origin/main
 
 	return removedImages, nil
 }
@@ -461,14 +470,21 @@ func (m *MySQLPetAdapter) PostPetAdopt(
 	if err != nil {
 		return -1, errors.New("fail to adopt pet")
 	}
+<<<<<<< HEAD
 	committed := false
 	defer func() {
 		if !committed {
 			_ = tx.Rollback()
+=======
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+>>>>>>> origin/main
 		}
 	}()
 
 	var petId int
+<<<<<<< HEAD
 	var petOwnerID, petName string
 	err = tx.QueryRow(`
 		SELECT pet_id, pet_ownerId,
@@ -481,6 +497,13 @@ func (m *MySQLPetAdapter) PostPetAdopt(
 		WHERE pet_id = ? AND pet_status = 'AVALIABLE'
 		FOR UPDATE
 	`, pid).Scan(&petId, &petOwnerID, &petName)
+=======
+	err = tx.QueryRow(`
+		SELECT pet_id FROM Pets
+		WHERE pet_id = ? AND pet_status = 'AVALIABLE'
+		FOR UPDATE
+	`, pid).Scan(&petId)
+>>>>>>> origin/main
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return -1, errors.New("pet not available for adoption")
@@ -566,6 +589,7 @@ func (m *MySQLPetAdapter) PostPetAdopt(
 		}
 	}
 
+<<<<<<< HEAD
 	if err = m.insertNotificationTx(
 		tx,
 		petOwnerID,
@@ -582,6 +606,11 @@ func (m *MySQLPetAdapter) PostPetAdopt(
 		return -1, errors.New("fail to adopt pet")
 	}
 	committed = true
+=======
+	if err = tx.Commit(); err != nil {
+		return -1, errors.New("fail to adopt pet")
+	}
+>>>>>>> origin/main
 
 	return rid, nil
 }
@@ -591,14 +620,21 @@ func (m *MySQLPetAdapter) UpdatePetAdopter(rid int, uid string) (err error) {
 	if err != nil {
 		return errors.New("fail to start transaction")
 	}
+<<<<<<< HEAD
 	committed := false
 	defer func() {
 		if !committed {
 			_ = tx.Rollback()
+=======
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+>>>>>>> origin/main
 		}
 	}()
 
 	var petID int
+<<<<<<< HEAD
 	var petName, selectedAdoptorID string
 	scanErr := tx.QueryRow(`
 		SELECT pr.rehome_petId,
@@ -608,12 +644,20 @@ func (m *MySQLPetAdapter) UpdatePetAdopter(rid int, uid string) (err error) {
 		           ELSE p.pet_name
 		       END,
 		       pr.rehome_adoptorId
+=======
+	scanErr := tx.QueryRow(`
+		SELECT pr.rehome_petId
+>>>>>>> origin/main
 		FROM Pets_Rehoming pr
 		JOIN Pets p ON pr.rehome_petId = p.pet_id
 		WHERE pr.rehome_id = ? AND pr.rehome_status = 'PENDING' AND p.pet_status = 'AVALIABLE'
 		      AND SUBSTRING_INDEX(p.pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
 		FOR UPDATE
+<<<<<<< HEAD
 	`, rid, uid).Scan(&petID, &petName, &selectedAdoptorID)
+=======
+	`, rid, uid).Scan(&petID)
+>>>>>>> origin/main
 	if scanErr != nil {
 		if scanErr == sql.ErrNoRows {
 			err = errors.New("adoption request not found or already processed")
@@ -641,6 +685,7 @@ func (m *MySQLPetAdapter) UpdatePetAdopter(rid int, uid string) (err error) {
 		err = execErr
 		return errors.New("fail to deny other adopters")
 	}
+<<<<<<< HEAD
 	deniedRecipients := make([]struct {
 		id  int
 		uid string
@@ -696,11 +741,16 @@ func (m *MySQLPetAdapter) UpdatePetAdopter(rid int, uid string) (err error) {
 			return errors.New("fail to create adoption notification")
 		}
 	}
+=======
+>>>>>>> origin/main
 
 	if err = tx.Commit(); err != nil {
 		return errors.New("fail to update pet adopter")
 	}
+<<<<<<< HEAD
 	committed = true
+=======
+>>>>>>> origin/main
 	return nil
 }
 

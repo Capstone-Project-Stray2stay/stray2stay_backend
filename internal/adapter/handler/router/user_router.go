@@ -24,7 +24,11 @@ func UserRouter(app *fiber.App, userHandler *user.HttpUserHandler) {
 	user.Get("/oauth/:provider", userHandler.BeginOAuth)
 	user.Get("/oauth/:provider/callback", userHandler.OAuthCallback)
 	user.Get("/authorize", userHandler.Authorize)
+<<<<<<< HEAD
 
+=======
+	
+>>>>>>> origin/main
 	authUser := user.Group("", middleware.AuthRequired)
 	authUser.Post("/logout", userHandler.Logout)
 	authUser.Get("/status", userHandler.NewUserStatus)
