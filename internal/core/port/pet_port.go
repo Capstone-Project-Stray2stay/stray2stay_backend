@@ -23,6 +23,18 @@ type PetSQLRepository interface {
 	CancelAdoptionRequest(uid string, rid int) (err error)
 	GetScreeningQuestions(pid int) (questions []domain.CustomScreeningQuestion, locked bool, err error)
 	SaveScreeningQuestions(uid string, pid int, questions []domain.ScreeningQuestionInput) (err error)
+
+	GetMyDiaryPets(uid string) (pets []domain.DiaryPet, err error)
+	// GetDiaryAccess reports how uid relates to the pet. Returns an error when
+	// there is no relationship, so callers can refuse before touching entries.
+	GetDiaryAccess(pid int, uid string) (role string, since string, err error)
+	GetDiaryEntries(pid int, from string, to string) (entries []domain.DiaryEntry, err error)
+	GetDiaryEntry(pid int, date string) (entry domain.DiaryEntry, err error)
+	// UpsertDiaryEntry writes the day's row. imageAddress empty means "keep the
+	// existing photo", which is only valid when a row already exists. The
+	// replaced image URL comes back so the service can clean up storage.
+	UpsertDiaryEntry(pid int, uid string, date string, imageAddress string, caption string) (entry domain.DiaryEntry, replacedImage string, err error)
+	DeleteDiaryEntry(pid int, date string) (removedImage string, err error)
 }
 type PetMongoRepository interface {
 	GetBreeds(petType string) (breedData []string, err error)
