@@ -1,0 +1,5 @@
+.git
+*.md
+docs/swagger.json
+docs/swagger.yaml
+cmd/generate-vapid

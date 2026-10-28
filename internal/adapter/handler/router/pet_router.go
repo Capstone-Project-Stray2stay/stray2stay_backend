@@ -37,6 +37,7 @@ func PetRouter(app *fiber.App, petHandler *pet.HttpPetHandler) {
 
 	authPet := pet.Group("", middleware.AuthRequired)
 
+	authPet.Get("/:pid/adoptors", petHandler.AllAdoptors)
 	authPet.Get("/:pid/screening-answer", petHandler.ScreeningAnswerAdoptor)
 	authPet.Put("/:pid/screening-questions", petHandler.SaveScreeningQuestions)
 	authPet.Post("/:pid/screening-answer-image", petHandler.UploadScreeningAnswerImage)
