@@ -17,7 +17,15 @@ func (h *HttpUserHandler) UpdateUser(c *fiber.Ctx) error {
 			"error": "Invalid request payload",
 		})
 	}
-	err := h.service.UpdateUser(context.Background(), uid, userUpdatePayload.Firstname, userUpdatePayload.Lastname, userUpdatePayload.PhoneNumber, userUpdatePayload.Address, userUpdatePayload.AddressLat, userUpdatePayload.AddressLong, userUpdatePayload.DogBreed, userUpdatePayload.DogColor, userUpdatePayload.DogAgeGroup, userUpdatePayload.DogGender, userUpdatePayload.CatBreed, userUpdatePayload.CatColor, userUpdatePayload.CatAgeGroup, userUpdatePayload.CatGender)
+	for _, pref := range userUpdatePayload.Preferences {
+		if pref.PetType != "DOG" && pref.PetType != "CAT" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Each preference needs petType DOG or CAT",
+			})
+		}
+	}
+
+	err := h.service.UpdateUser(context.Background(), uid, userUpdatePayload.Firstname, userUpdatePayload.Lastname, userUpdatePayload.PhoneNumber, userUpdatePayload.Address, userUpdatePayload.AddressLat, userUpdatePayload.AddressLong, userUpdatePayload.Preferences)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
