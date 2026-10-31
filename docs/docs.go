@@ -164,7 +164,7 @@ const docTemplate = `{
         },
         "/api/pet/all": {
             "get": {
-                "description": "Retrieve all pets",
+                "description": "For authenticated users, results are ordered by the best saved preference match first. Distance breaks ties when location is available.",
                 "produces": [
                     "application/json"
                 ],

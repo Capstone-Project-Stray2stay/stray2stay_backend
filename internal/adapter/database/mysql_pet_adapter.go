@@ -172,6 +172,7 @@ func (m *MySQLPetAdapter) UpdatePet(
 }
 
 func (m *MySQLPetAdapter) GetPetsInfo(
+	uid string,
 	page int,
 	pageSize int,
 	petAgeGroup string,
@@ -235,14 +236,39 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 		return nil, 0, err
 	}
 
+	preferenceScoreSQL := `0 AS preference_score`
+	args := make([]any, 0, len(filterArgs)+6)
+	if uid != "" {
+		// Preference cards are alternatives; score the best-matching card by matched traits.
+		preferenceScoreSQL = `(
+			SELECT COALESCE(MAX(
+				1
+				+ CASE WHEN pref_breed IS NOT NULL AND pref_breed <> '' AND pref_breed = pet_breed THEN 1 ELSE 0 END
+				+ CASE WHEN pref_color IS NOT NULL AND pref_color <> '' AND pref_color = pet_color THEN 1 ELSE 0 END
+				+ CASE WHEN pref_ageGroup IS NOT NULL AND pref_ageGroup <> '' AND pref_ageGroup = pet_ageGroup THEN 1 ELSE 0 END
+				+ CASE WHEN pref_gender IS NOT NULL AND pref_gender <> '' AND pref_gender = pet_gender THEN 1 ELSE 0 END
+			), 0)
+			FROM Users_Preferences
+			WHERE pref_userId = ?
+			  AND pref_petType = pet_type
+			  AND (
+				COALESCE(pref_breed, '') <> ''
+				OR COALESCE(pref_color, '') <> ''
+				OR COALESCE(pref_ageGroup, '') <> ''
+				OR COALESCE(pref_gender, '') <> ''
+			  )
+		) AS preference_score`
+		args = append(args, uid)
+	}
+
 	var query string
-	var args []any
 
 	if hasLocation {
 		query = `
 		SELECT pet_id, pet_name, pet_imageAddress, pet_ageGroup,
 		       pet_gender, pet_type, pet_breed, pet_color,
 		       pet_address, pet_addressLat, pet_addressLong,
+		       ` + preferenceScoreSQL + `,
 		       (
 		         6371 * acos(
 		           cos(radians(?)) *
@@ -254,24 +280,25 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 		       ) AS distance
 		FROM Pets
 		`
-		args = append([]any{userLat, userLong, userLat}, filterArgs...)
+		args = append(args, userLat, userLong, userLat)
 	} else {
 		query = `
 		SELECT pet_id, pet_name, pet_imageAddress, pet_ageGroup,
 		       pet_gender, pet_type, pet_breed, pet_color,
 		       pet_address, pet_addressLat, pet_addressLong,
+		       ` + preferenceScoreSQL + `,
 		       0 AS distance
 		FROM Pets
 		`
-		args = append([]any{}, filterArgs...)
 	}
 
 	query += whereClause
+	args = append(args, filterArgs...)
 
 	if hasLocation {
-		query += " ORDER BY distance ASC, pet_createAt DESC"
+		query += " ORDER BY preference_score DESC, distance ASC, pet_createAt DESC"
 	} else {
-		query += " ORDER BY pet_createAt DESC"
+		query += " ORDER BY preference_score DESC, pet_createAt DESC"
 	}
 
 	query += " LIMIT ? OFFSET ?"
@@ -288,6 +315,7 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 	for rows.Next() {
 		var pet domain.PetsInfo
 		var imageAddressRaw []byte
+		var preferenceScore int
 		var distance float64
 
 		err := rows.Scan(
@@ -302,6 +330,7 @@ func (m *MySQLPetAdapter) GetPetsInfo(
 			&pet.PetAddress,
 			&pet.PetAddressLat,
 			&pet.PetAddressLong,
+			&preferenceScore,
 			&distance,
 		)
 		if err != nil {

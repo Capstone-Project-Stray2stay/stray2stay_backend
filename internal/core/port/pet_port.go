@@ -7,7 +7,7 @@ import (
 )
 
 type PetSQLRepository interface {
-	GetPetsInfo(page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, petLocation string, keyword string, userLat float64, userLong float64) (petData []domain.PetsInfo, totalCount int, err error)
+	GetPetsInfo(uid string, page int, pageSize int, petAgeGroup string, petGender string, petType string, petBreed string, petColor string, petLocation string, keyword string, userLat float64, userLong float64) (petData []domain.PetsInfo, totalCount int, err error)
 	GetPetInfo(pid int) (petData domain.PetInfo, err error)
 	CreatePet(uid string, petName string, imageAddress json.RawMessage, ageGroup string, gender string, petType string, breed string, color string, personality json.RawMessage, specialCare json.RawMessage, sterilized bool, vaccination []string, address string, addressLat float64, addressLong float64, status string, note string) (id int, err error)
 	UpdatePet(uid string, pid int, petName string, imageAddress json.RawMessage, ageGroup string, gender string, petType string, breed string, color string, personality json.RawMessage, specialCare json.RawMessage, sterilized bool, vaccination []string, address string, addressLat float64, addressLong float64, note string) (removedImages []string, err error)

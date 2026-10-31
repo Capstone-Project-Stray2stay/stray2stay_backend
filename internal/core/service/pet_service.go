@@ -127,7 +127,7 @@ func (s *PetServiceImpl) SearchPets(ctx context.Context, uid string, page int, p
 		}
 	}
 
-	data, totalCount, err := s.mysqlRepo.GetPetsInfo(page, pageSize, petAgeGroup, petGender, petType, petBreed, petColor, petLocation, keyword, userLat, userLong)
+	data, totalCount, err := s.mysqlRepo.GetPetsInfo(uid, page, pageSize, petAgeGroup, petGender, petType, petBreed, petColor, petLocation, keyword, userLat, userLong)
 	if err != nil {
 		return nil, 0, err
 	}
