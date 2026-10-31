@@ -145,7 +145,7 @@ type PetAdoptRequest struct {
 // as part of a full-set replace (see SaveScreeningQuestionsRequest).
 type ScreeningQuestionInput struct {
 	QuestionType     string   `json:"questionType" validate:"required,oneof=CHECKLIST MULTIPLE_CHOICE ESSAY IMAGE"`
-	QuestionText     string   `json:"questionText" validate:"required"`
+	QuestionText     string   `json:"questionText" validate:"required_unless=QuestionType IMAGE"`
 	QuestionOptions  []string `json:"questionOptions"`
 	QuestionRequired bool     `json:"questionRequired"`
 	QuestionOrder    int      `json:"questionOrder"`
