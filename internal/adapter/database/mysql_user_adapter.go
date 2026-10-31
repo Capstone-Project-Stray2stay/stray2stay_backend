@@ -147,8 +147,24 @@ func (m *MySQLUserAdapter) RemoveUser(uid string) (err error) {
 	return nil
 }
 
-func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64, dogBreed string, dogColor string, dogAgeGroup string, dogGender string, catBreed string, catColor string, catAgeGroup string, catGender string) (err error) {
-	result, err := m.db.Exec(`UPDATE Users SET user_firstname = ?, user_lastname = ?, user_phoneNumber = ?, user_address = ?, user_addressLat = ?, user_addressLong = ? WHERE user_id = ?`, firstName, lastName, phoneNumber, address, addressLat, addressLong, uid)
+// nullIfEmpty stores "" as NULL — the age-group and gender columns are ENUMs that
+// don't accept an empty string.
+func nullIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName string, phoneNumber string, address string, addressLat float64, addressLong float64, preferences []domain.UserPreference) (err error) {
+	tx, err := m.db.Begin()
+	if err != nil {
+		return errors.New("failed to update user")
+	}
+	// Rolls back unless Commit below succeeds, so the profile and its preferences change together
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`UPDATE Users SET user_firstname = ?, user_lastname = ?, user_phoneNumber = ?, user_address = ?, user_addressLat = ?, user_addressLong = ? WHERE user_id = ?`, firstName, lastName, phoneNumber, address, addressLat, addressLong, uid)
 	if err != nil {
 		return errors.New("failed to update user")
 	}
@@ -157,35 +173,25 @@ func (m *MySQLUserAdapter) UpdateUserInfo(uid string, firstName string, lastName
 	if rowsAffected == 0 || err != nil {
 		return errors.New("user not found")
 	}
-	
-	var dogPrefId int64
-	err = m.db.QueryRow(`SELECT pref_id FROM Users_Preferences WHERE pref_userId = ? AND pref_petType = 'DOG'`, uid).Scan(&dogPrefId)
-	if err != nil && err != sql.ErrNoRows {
+
+	// The submitted list is the whole set (any number per species, possibly none),
+	// so replace the user's rows rather than patching them one by one.
+	if _, err = tx.Exec(`DELETE FROM Users_Preferences WHERE pref_userId = ?`, uid); err != nil {
 		return errors.New("failed to update user")
 	}
-	if err == sql.ErrNoRows {
-		_, err = m.db.Exec(`INSERT INTO Users_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'DOG', ?, ?, ?, ?)`, uid, dogBreed, dogColor, dogAgeGroup, dogGender)
-	} else {
-		_, err = m.db.Exec(`UPDATE Users_Preferences SET pref_breed = ?, pref_color = ?, pref_ageGroup = ?, pref_gender = ? WHERE pref_id = ?`, dogBreed, dogColor, dogAgeGroup, dogGender, dogPrefId)
-	}
-	if err != nil {
-		return errors.New("failed to update user")
+	for _, pref := range preferences {
+		_, err = tx.Exec(
+			`INSERT INTO Users_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, ?, ?, ?, ?, ?)`,
+			uid, pref.PetType, nullIfEmpty(pref.Breed), nullIfEmpty(pref.Color), nullIfEmpty(pref.AgeGroup), nullIfEmpty(pref.Gender),
+		)
+		if err != nil {
+			return errors.New("failed to update user")
+		}
 	}
 
-	var catPrefId int64
-	err = m.db.QueryRow(`SELECT pref_id FROM Users_Preferences WHERE pref_userId = ? AND pref_petType = 'CAT'`, uid).Scan(&catPrefId)
-	if err != nil && err != sql.ErrNoRows {
+	if err = tx.Commit(); err != nil {
 		return errors.New("failed to update user")
 	}
-	if err == sql.ErrNoRows {
-		_, err = m.db.Exec(`INSERT INTO Users_Preferences (pref_userId, pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender) VALUES (?, 'CAT', ?, ?, ?, ?)`, uid, catBreed, catColor, catAgeGroup, catGender)
-	} else {
-		_, err = m.db.Exec(`UPDATE Users_Preferences SET pref_breed = ?, pref_color = ?, pref_ageGroup = ?, pref_gender = ? WHERE pref_id = ?`, catBreed, catColor, catAgeGroup, catGender, catPrefId)
-	}
-	if err != nil {
-		return errors.New("failed to update user")
-	}
-
 	return nil
 }
 
@@ -227,19 +233,36 @@ func (m *MySQLUserAdapter) GetUserInfo(uid string) (userInfo *domain.UserInfo, e
 		return nil, errors.New("failed to get user info")
 	}
 
-	err = m.db.QueryRow(
-		`SELECT pref_breed, pref_color, pref_ageGroup, pref_gender FROM Users_Preferences WHERE pref_userId = ? AND pref_petType = 'DOG'`,
+	rows, err := m.db.Query(
+		`SELECT pref_petType, pref_breed, pref_color, pref_ageGroup, pref_gender FROM Users_Preferences WHERE pref_userId = ? ORDER BY pref_id`,
 		uid,
-	).Scan(&user.DogBreed, &user.DogColor, &user.DogAgeGroup, &user.DogGender)
-	if err != nil && err != sql.ErrNoRows {
+	)
+	if err != nil {
 		return nil, errors.New("failed to get user info")
 	}
+	defer rows.Close()
 
-	err = m.db.QueryRow(
-		`SELECT pref_breed, pref_color, pref_ageGroup, pref_gender FROM Users_Preferences WHERE pref_userId = ? AND pref_petType = 'CAT'`,
-		uid,
-	).Scan(&user.CatBreed, &user.CatColor, &user.CatAgeGroup, &user.CatGender)
-	if err != nil && err != sql.ErrNoRows {
+	// Never nil, so the JSON is [] rather than null for a user with no preferences
+	user.Preferences = []domain.UserPreference{}
+	for rows.Next() {
+		var petType, breed, color, ageGroup, gender sql.NullString
+		if err := rows.Scan(&petType, &breed, &color, &ageGroup, &gender); err != nil {
+			return nil, errors.New("failed to get user info")
+		}
+		// The old one-dog-one-cat code always wrote a row, even when nothing was picked;
+		// skip those so they don't show up as blank Dog #1 / Cat #1 cards
+		if !petType.Valid || (breed.String == "" && color.String == "" && ageGroup.String == "" && gender.String == "") {
+			continue
+		}
+		user.Preferences = append(user.Preferences, domain.UserPreference{
+			PetType:  petType.String,
+			Breed:    breed.String,
+			Color:    color.String,
+			AgeGroup: ageGroup.String,
+			Gender:   gender.String,
+		})
+	}
+	if err := rows.Err(); err != nil {
 		return nil, errors.New("failed to get user info")
 	}
 
