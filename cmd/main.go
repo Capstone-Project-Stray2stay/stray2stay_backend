@@ -17,7 +17,9 @@ import (
 	httpPetHandler "github.com/S-nudhana/stray2stay/internal/adapter/handler/http/pet"
 	httpUserHandler "github.com/S-nudhana/stray2stay/internal/adapter/handler/http/user"
 	"github.com/S-nudhana/stray2stay/internal/adapter/handler/router"
+	"github.com/S-nudhana/stray2stay/internal/core/port"
 	"github.com/S-nudhana/stray2stay/internal/core/service"
+	"github.com/S-nudhana/stray2stay/internal/infrastructure/ai"
 	"github.com/S-nudhana/stray2stay/internal/infrastructure/config"
 	"github.com/S-nudhana/stray2stay/internal/infrastructure/database"
 	"github.com/S-nudhana/stray2stay/internal/infrastructure/storage"
@@ -71,6 +73,20 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Google AI Studio is optional. Without a key the server runs exactly as
+	// before and adoption requests simply carry no AI summary.
+	var adoptionSummarizer port.AdoptionSummarizer
+	if cfg.GoogleAI.Enabled() {
+		aiClient, err := ai.NewGoogleAIStudioClient(cfg.GoogleAI)
+		if err != nil {
+			log.Fatal(err)
+		}
+		adoptionSummarizer = service.NewAdoptionSummaryService(aiClient)
+		log.Printf("Google AI Studio enabled (model %s)", cfg.GoogleAI.Model)
+	} else {
+		log.Println("GEMINI_API_KEY not set: AI adoption summaries are disabled")
+	}
+
 	app := fiber.New(fiber.Config{
 		BodyLimit: 20 * 1024 * 1024, // 20MB, to accommodate multi-image pet uploads
 	})
@@ -95,7 +111,7 @@ func main() {
 
 	mysqlPetRepo := adapter.NewMySQLPetAdapter(mysql_db)
 	mongoPetRepo := adapter.NewMongoPetAdapter(mongo_db)
-	petService := service.NewPetService(mysqlPetRepo, mongoPetRepo, uploader, userRepo)
+	petService := service.NewPetService(mysqlPetRepo, mongoPetRepo, uploader, userRepo, adoptionSummarizer)
 	petHandler := httpPetHandler.NewHttpPetHandler(petService)
 
 	if cfg.Server.IsProduction() {

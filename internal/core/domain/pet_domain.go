@@ -357,6 +357,19 @@ type PetDiaryDeleteResponse struct {
 }
 
 type ScreeningAnswer struct {
+	// Pid and the pet descriptors give the AI summarizer the context it
+	// needs without a second lookup; they are also handy for the owner view.
+	Pid      int    `json:"petId"`
+	PetName  string `json:"petName"`
+	PetType  string `json:"petType"`
+	PetBreed string `json:"petBreed"`
+
+	// AISummary is the short briefing shown above the form. It is empty
+	// until AISummaryStatus is READY.
+	AISummary string `json:"aiSummary"`
+	// AISummaryStatus is one of AdoptionSummaryPending/Ready/Failed.
+	AISummaryStatus string `json:"aiSummaryStatus"`
+
 	Q1_1 bool
 	Q1_2 bool
 	Q1_3 string

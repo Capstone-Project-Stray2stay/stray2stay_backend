@@ -91,6 +91,10 @@ type AdoptorInfo struct {
 	ImageAddress string `json:"imageAddress"`
 	Rid          int    `json:"rehomeId"`
 	RehomeStatus string `json:"rehomeStatus"`
+	// AISummary lets the owner's adoptor list show the same briefing that
+	// tops the full screening form. Empty until AISummaryStatus is READY.
+	AISummary       string `json:"aiSummary"`
+	AISummaryStatus string `json:"aiSummaryStatus"`
 }
 
 type PetAdoptorsInfo struct {

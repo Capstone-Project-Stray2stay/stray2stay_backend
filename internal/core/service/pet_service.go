@@ -6,6 +6,7 @@ import (
 	"log"
 	"mime/multipart"
 	"strings"
+	"sync"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
 	"github.com/S-nudhana/stray2stay/internal/core/port"
@@ -45,14 +46,23 @@ type PetServiceImpl struct {
 	mongoRepo port.PetMongoRepository
 	uploader  port.ImageUploader
 	userRepo  port.UserMySQLRepository
+	// summarizer is optional: a deployment without an AI key still accepts
+	// adoption requests, their summaries just stay PENDING.
+	summarizer port.AdoptionSummarizer
+	// summariesInFlight keys the rids currently being summarized, so a
+	// refreshed owner page does not start the same generation twice.
+	summariesInFlight sync.Map
 }
 
-func NewPetService(mysqlRepo port.PetSQLRepository, mongoRepo port.PetMongoRepository, uploader port.ImageUploader, userRepo port.UserMySQLRepository) PetService {
+// NewPetService wires the pet use cases. summarizer may be nil, which turns
+// AI adoption summaries off without affecting anything else.
+func NewPetService(mysqlRepo port.PetSQLRepository, mongoRepo port.PetMongoRepository, uploader port.ImageUploader, userRepo port.UserMySQLRepository, summarizer port.AdoptionSummarizer) PetService {
 	return &PetServiceImpl{
-		mysqlRepo: mysqlRepo,
-		mongoRepo: mongoRepo,
-		uploader:  uploader,
-		userRepo:  userRepo,
+		mysqlRepo:  mysqlRepo,
+		mongoRepo:  mongoRepo,
+		uploader:   uploader,
+		userRepo:   userRepo,
+		summarizer: summarizer,
 	}
 }
 
@@ -152,6 +162,17 @@ func (s *PetServiceImpl) AdoptPet(ctx context.Context, uid string, pid int, q1_1
 	if err != nil {
 		return rid, err
 	}
+
+	// The adopter should not wait on a model call, and a failed summary must
+	// never undo a committed request, so this runs detached.
+	s.summarizeAdoptionAsync(rid, pid, domain.ScreeningAnswer{
+		Q1_1: q1_1, Q1_2: q1_2, Q1_3: q1_3,
+		Q2_1: q2_1, Q2_2: q2_2, Q2_3: q2_3,
+		Q3_1: q3_1, Q3_2: q3_2, Q3_3: q3_3,
+		Q4_1: q4_1, Q5_1: q5_1, Q6_1: q6_1, Q6_2: q6_2,
+		Note: note,
+	}, answers)
+
 	return rid, nil
 }
 
@@ -228,6 +249,14 @@ func (s *PetServiceImpl) ScreeningAnswerAdoptor(ctx context.Context, screeningAn
 	if err != nil {
 		return domain.ScreeningAnswer{}, err
 	}
+
+	// Heals requests submitted while AI was unavailable. It only fires for
+	// rows that were never attempted, so a request that failed to summarize
+	// is not retried on every page load.
+	if screeningAnswer.AISummaryStatus == domain.AdoptionSummaryPending && screeningAnswer.AISummary == "" {
+		s.resummarizeAdoptionAsync(screeningAnswerAdoptorPayload.Rid, screeningAnswer)
+	}
+
 	return screeningAnswer, nil
 }
 
