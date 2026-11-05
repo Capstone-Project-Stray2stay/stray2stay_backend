@@ -736,12 +736,16 @@ func (m *MySQLPetAdapter) UpdatePetAdopter(rid int, uid string) (err error) {
 func (m *MySQLPetAdapter) GetScreeningAnswer(rehomeID int, uid string) (domain.ScreeningAnswer, error) {
 	var a domain.ScreeningAnswer
 
+	var petName sql.NullString
+	var aiSummary sql.NullString
+
 	err := m.mysql_db.QueryRow(`
 		SELECT pr.rehome_Q1_1, pr.rehome_Q1_2, pr.rehome_Q1_3,
 		       pr.rehome_Q2_1, pr.rehome_Q2_2, pr.rehome_Q2_3,
 		       pr.rehome_Q3_1, pr.rehome_Q3_2, pr.rehome_Q3_3,
 		       pr.rehome_Q4_1, pr.rehome_Q5_1, pr.rehome_Q6_1, pr.rehome_Q6_2,
-		       pr.rehome_note
+		       pr.rehome_note, pr.rehome_aiSummary, pr.rehome_aiSummaryStatus,
+		       p.pet_id, p.pet_name, p.pet_type, p.pet_breed
 		FROM Pets_Rehoming pr
 		JOIN Pets p ON pr.rehome_petId = p.pet_id
 		WHERE pr.rehome_id = ? AND SUBSTRING_INDEX(p.pet_ownerId, ':', 1) = SUBSTRING_INDEX(?, ':', 1)
@@ -750,7 +754,8 @@ func (m *MySQLPetAdapter) GetScreeningAnswer(rehomeID int, uid string) (domain.S
 		&a.Q2_1, &a.Q2_2, &a.Q2_3,
 		&a.Q3_1, &a.Q3_2, &a.Q3_3,
 		&a.Q4_1, &a.Q5_1, &a.Q6_1, &a.Q6_2,
-		&a.Note,
+		&a.Note, &aiSummary, &a.AISummaryStatus,
+		&a.Pid, &petName, &a.PetType, &a.PetBreed,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -758,6 +763,8 @@ func (m *MySQLPetAdapter) GetScreeningAnswer(rehomeID int, uid string) (domain.S
 		}
 		return domain.ScreeningAnswer{}, errors.New("fail to get screening answer")
 	}
+	a.PetName = petName.String
+	a.AISummary = aiSummary.String
 
 	rows, err := m.mysql_db.Query(`
 		SELECT q.question_id, q.question_text, q.question_type, a.answer_value
@@ -789,6 +796,32 @@ func (m *MySQLPetAdapter) GetScreeningAnswer(rehomeID int, uid string) (domain.S
 	return a, nil
 }
 
+// UpdateAdoptionSummary stores the AI briefing for one adoption request. The
+// summary is written on a background path well after the request itself was
+// committed, so a vanished row (cancelled request, deleted pet) is not an
+// error worth reporting.
+func (m *MySQLPetAdapter) UpdateAdoptionSummary(rid int, summary string, status string) (err error) {
+	var storedSummary any
+	if summary != "" {
+		storedSummary = summary
+	}
+
+	// rehome_updateAt is left untouched: generating a summary is not a
+	// change the adopter or owner made to the request.
+	_, err = m.mysql_db.Exec(`
+		UPDATE Pets_Rehoming
+		SET rehome_aiSummary = ?,
+		    rehome_aiSummaryStatus = ?,
+		    rehome_aiSummaryAt = CURRENT_TIMESTAMP,
+		    rehome_updateAt = rehome_updateAt
+		WHERE rehome_id = ?
+	`, storedSummary, status, rid)
+	if err != nil {
+		return errors.New("fail to save adoption summary")
+	}
+	return nil
+}
+
 func (m *MySQLPetAdapter) GetMyAdoptionStatus(pid int, uid string) (status string, err error) {
 	err = m.mysql_db.QueryRow(`
 		SELECT rehome_status FROM Pets_Rehoming
@@ -816,7 +849,7 @@ func (m *MySQLPetAdapter) GetAllAdoptors(uid string) (adoptors []domain.PetAdopt
 	rows, err := m.mysql_db.Query(`
 		SELECT p.pet_id, p.pet_name, p.pet_imageAddress, u.user_id, u.user_firstname,
 		       u.user_lastname, u.user_phoneNumber, u.user_address, u.user_imageAddress,
-		       pr.rehome_id, pr.rehome_status
+		       pr.rehome_id, pr.rehome_status, pr.rehome_aiSummary, pr.rehome_aiSummaryStatus
 		FROM Pets_Rehoming pr
 		JOIN Pets p ON pr.rehome_petId = p.pet_id
 		JOIN Users u ON pr.rehome_adoptorId = u.user_id
@@ -832,13 +865,16 @@ func (m *MySQLPetAdapter) GetAllAdoptors(uid string) (adoptors []domain.PetAdopt
 		var petID int
 		var petName, petImageAddress string
 		var adoptorImage sql.NullString
+		var aiSummary sql.NullString
 
 		if err := rows.Scan(&petID, &petName, &petImageAddress, &adoptor.UserID,
 			&adoptor.Firstname, &adoptor.Lastname, &adoptor.PhoneNumber, &adoptor.Address,
-			&adoptorImage, &adoptor.Rid, &adoptor.RehomeStatus); err != nil {
+			&adoptorImage, &adoptor.Rid, &adoptor.RehomeStatus,
+			&aiSummary, &adoptor.AISummaryStatus); err != nil {
 			return nil, err
 		}
 		adoptor.ImageAddress = adoptorImage.String
+		adoptor.AISummary = aiSummary.String
 
 		if _, ok := petInfoMap[petID]; !ok {
 			petInfoMap[petID] = struct {

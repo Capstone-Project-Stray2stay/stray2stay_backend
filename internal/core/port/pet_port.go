@@ -15,6 +15,9 @@ type PetSQLRepository interface {
 	UpdatePetAdopter(rid int, uid string) (err error)
 	GetPetsSuggestion() (petData []domain.PetsInfo, err error)
 	GetScreeningAnswer(rid int, uid string) (answer domain.ScreeningAnswer, err error)
+	// UpdateAdoptionSummary stores the AI briefing for one adoption request.
+	// status is one of domain.AdoptionSummaryPending/Ready/Failed.
+	UpdateAdoptionSummary(rid int, summary string, status string) (err error)
 	GetAllAdoptors(uid string) (adoptors []domain.PetAdoptorsInfo, err error)
 	DeletePet(uid string, pid int) (imageAddresses []string, err error)
 	GetPetsByOwner(uid string) (petData []domain.PetsInfo, err error)

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -17,6 +19,7 @@ type Config struct {
 	Session    SessionConfig
 	Google     GoogleConfig
 	Cloudinary CloudinaryConfig
+	GoogleAI   GoogleAIConfig
 }
 
 type ServerConfig struct {
@@ -72,6 +75,22 @@ type CloudinaryConfig struct {
 	APISecret string
 }
 
+// GoogleAIConfig configures the Google AI Studio (Gemini) client. The API key
+// is deliberately not required at boot: without it the server still starts and
+// the AI-backed features degrade instead of taking the whole app down.
+type GoogleAIConfig struct {
+	APIKey     string
+	Model      string
+	BaseURL    string
+	Timeout    time.Duration
+	MaxRetries int
+}
+
+// Enabled reports whether a Google AI Studio client can be built.
+func (g GoogleAIConfig) Enabled() bool {
+	return g.APIKey != ""
+}
+
 func Load() (*Config, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, relying on environment variables")
@@ -121,6 +140,20 @@ func Load() (*Config, error) {
 			CloudName: v.require("CLOUDINARY_CLOUD_NAME"),
 			APIKey:    v.require("CLOUDINARY_API_KEY"),
 			APISecret: v.require("CLOUDINARY_API_SECRET"),
+		},
+		GoogleAI: GoogleAIConfig{
+			APIKey: os.Getenv("GEMINI_API_KEY"),
+			// A lite tier is the right default here: condensing a form that
+			// is already written needs no flagship reasoning, and the lite
+			// models carry a larger free-tier allowance. gemini-2.5-* is
+			// closed to new API keys, so the default must be a 3.x name.
+			Model:   getEnv("GEMINI_MODEL", "gemini-3.5-flash-lite"),
+			BaseURL: strings.TrimRight(getEnv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta"), "/"),
+			// Flash models routinely take tens of seconds under load, so a
+			// ceiling much below this times out calls that would have
+			// succeeded.
+			Timeout:    time.Duration(getEnvInt("GEMINI_TIMEOUT_SECONDS", 60)) * time.Second,
+			MaxRetries: getEnvInt("GEMINI_MAX_RETRIES", 2),
 		},
 	}
 
