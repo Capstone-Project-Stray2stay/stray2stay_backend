@@ -43,13 +43,13 @@ func okResponse(text string) string {
 		`"usageMetadata":{"promptTokenCount":11,"candidatesTokenCount":7,"totalTokenCount":18},"modelVersion":"gemini-2.5-flash-001"}`
 }
 
-func TestNewGoogleAIStudioClientRequiresAPIKey(t *testing.T) {
+func TestNewGoogleAIStudioClientRequiresAPIKey(t *testing.T) { // UT-BE-AI-01
 	if _, err := NewGoogleAIStudioClient(config.GoogleAIConfig{Model: "m", BaseURL: "https://example.test"}); err == nil {
 		t.Fatal("NewGoogleAIStudioClient() succeeded without an API key; want an error")
 	}
 }
 
-func TestGenerateSendsKeyInHeaderAndParsesResponse(t *testing.T) {
+func TestGenerateSendsKeyInHeaderAndParsesResponse(t *testing.T) { // UT-BE-AI-02
 	var gotPath, gotKey, gotQuery string
 	var body generateContentRequest
 
@@ -112,7 +112,7 @@ func TestGenerateSendsKeyInHeaderAndParsesResponse(t *testing.T) {
 	}
 }
 
-func TestGenerateEncodesImagesInline(t *testing.T) {
+func TestGenerateEncodesImagesInline(t *testing.T) { // UT-BE-AI-02
 	var body generateContentRequest
 
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -144,7 +144,7 @@ func TestGenerateEncodesImagesInline(t *testing.T) {
 	}
 }
 
-func TestGenerateRetriesServerErrorsThenSucceeds(t *testing.T) {
+func TestGenerateRetriesServerErrorsThenSucceeds(t *testing.T) { // UT-BE-AI-05
 	var calls int32
 
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -169,7 +169,7 @@ func TestGenerateRetriesServerErrorsThenSucceeds(t *testing.T) {
 	}
 }
 
-func TestGenerateDoesNotRetryBadRequests(t *testing.T) {
+func TestGenerateDoesNotRetryBadRequests(t *testing.T) { // UT-BE-AI-05
 	var calls int32
 
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -187,7 +187,7 @@ func TestGenerateDoesNotRetryBadRequests(t *testing.T) {
 	}
 }
 
-func TestGenerateMapsProviderFailures(t *testing.T) {
+func TestGenerateMapsProviderFailures(t *testing.T) { // UT-BE-AI-05
 	tests := []struct {
 		name    string
 		status  int
@@ -250,7 +250,7 @@ func TestGenerateMapsProviderFailures(t *testing.T) {
 	}
 }
 
-func TestGenerateHonoursContextCancellation(t *testing.T) {
+func TestGenerateHonoursContextCancellation(t *testing.T) { // UT-BE-AI-07
 	// The handler answers on its own after the caller's deadline has already
 	// passed, so the server can always shut down cleanly at the end of the
 	// test while the client still has to give up mid-flight.
@@ -268,7 +268,7 @@ func TestGenerateHonoursContextCancellation(t *testing.T) {
 	}
 }
 
-func TestGenerateRejectsEmptyPrompt(t *testing.T) {
+func TestGenerateRejectsEmptyPrompt(t *testing.T) { // UT-BE-AI-01
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Error("server was called; an empty prompt must not reach the provider")
 	}, 0)
@@ -278,14 +278,14 @@ func TestGenerateRejectsEmptyPrompt(t *testing.T) {
 	}
 }
 
-func TestBuildRequestOmitsGenerationConfigWhenUnset(t *testing.T) {
+func TestBuildRequestOmitsGenerationConfigWhenUnset(t *testing.T) { // UT-BE-AI-03
 	got := buildRequest(domain.AIRequest{Prompt: "hi"}, "gemini-2.5-flash")
 	if got.GenerationConfig != nil {
 		t.Errorf("generationConfig = %+v; want it omitted so the model defaults apply", got.GenerationConfig)
 	}
 }
 
-func TestBuildRequestSetsJSONModeWithSchema(t *testing.T) {
+func TestBuildRequestSetsJSONModeWithSchema(t *testing.T) { // UT-BE-AI-03
 	schema := map[string]any{"type": "object"}
 	got := buildRequest(domain.AIRequest{Prompt: "hi", ResponseSchema: schema}, "gemini-2.5-flash")
 
@@ -297,7 +297,7 @@ func TestBuildRequestSetsJSONModeWithSchema(t *testing.T) {
 	}
 }
 
-func TestThinkingControlMatchesModelFamily(t *testing.T) {
+func TestThinkingControlMatchesModelFamily(t *testing.T) { // UT-BE-AI-04
 	// Sending a 2.5-style token budget to a 3.x model does not fail loudly:
 	// the request hangs until the client's timeout. These cases are the only
 	// thing standing between that and production.
@@ -344,7 +344,7 @@ func TestThinkingControlMatchesModelFamily(t *testing.T) {
 	}
 }
 
-func TestGeminiMajorVersion(t *testing.T) {
+func TestGeminiMajorVersion(t *testing.T) { // UT-BE-AI-04
 	tests := map[string]int{
 		"gemini-3.8-flash":       3,
 		"gemini-2.5-flash-lite":  2,
@@ -359,7 +359,7 @@ func TestGeminiMajorVersion(t *testing.T) {
 	}
 }
 
-func TestGenerateStopsWhenQuotaResetIsFarAway(t *testing.T) {
+func TestGenerateStopsWhenQuotaResetIsFarAway(t *testing.T) { // UT-BE-AI-06
 	// A daily quota error comes back asking for most of a day. Retrying it
 	// is pure waste: every attempt is a guaranteed rejection, and the caller
 	// sits there for minutes to learn what the first response already said.
@@ -384,7 +384,7 @@ func TestGenerateStopsWhenQuotaResetIsFarAway(t *testing.T) {
 	}
 }
 
-func TestGenerateHonoursShortRetryAfter(t *testing.T) {
+func TestGenerateHonoursShortRetryAfter(t *testing.T) { // UT-BE-AI-06
 	// A brief delay is the case retrying exists for, so it must still run.
 	var calls int32
 
@@ -410,7 +410,7 @@ func TestGenerateHonoursShortRetryAfter(t *testing.T) {
 	}
 }
 
-func TestRetryDelayFrom(t *testing.T) {
+func TestRetryDelayFrom(t *testing.T) { // UT-BE-AI-06
 	tests := []struct {
 		name   string
 		header string

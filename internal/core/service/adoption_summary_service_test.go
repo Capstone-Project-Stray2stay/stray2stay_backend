@@ -46,7 +46,7 @@ func sampleInput() domain.AdoptionSummaryInput {
 	}
 }
 
-func TestSummarizeAdoptionFormBuildsPromptAndTrimsAnswer(t *testing.T) {
+func TestSummarizeAdoptionFormBuildsPromptAndTrimsAnswer(t *testing.T) { // UT-BE-SUMM-01
 	gen := &stubGenerator{text: "  An adopter in a condo with two cats.  "}
 	service := NewAdoptionSummaryService(gen)
 
@@ -73,7 +73,7 @@ func TestSummarizeAdoptionFormBuildsPromptAndTrimsAnswer(t *testing.T) {
 	}
 }
 
-func TestSummarizeAdoptionFormRendersBooleansAndMissingAnswers(t *testing.T) {
+func TestSummarizeAdoptionFormRendersBooleansAndMissingAnswers(t *testing.T) { // UT-BE-SUMM-01
 	gen := &stubGenerator{text: "ok"}
 	service := NewAdoptionSummaryService(gen)
 
@@ -95,7 +95,7 @@ func TestSummarizeAdoptionFormRendersBooleansAndMissingAnswers(t *testing.T) {
 	}
 }
 
-func TestSummarizeAdoptionFormNeutralisesPromptInjection(t *testing.T) {
+func TestSummarizeAdoptionFormNeutralisesPromptInjection(t *testing.T) { // UT-BE-SUMM-02
 	gen := &stubGenerator{text: "ok"}
 	service := NewAdoptionSummaryService(gen)
 
@@ -116,7 +116,7 @@ func TestSummarizeAdoptionFormNeutralisesPromptInjection(t *testing.T) {
 	}
 }
 
-func TestSummarizeAdoptionFormRendersCustomAnswers(t *testing.T) {
+func TestSummarizeAdoptionFormRendersCustomAnswers(t *testing.T) { // UT-BE-SUMM-01
 	gen := &stubGenerator{text: "ok"}
 	service := NewAdoptionSummaryService(gen)
 
@@ -150,7 +150,7 @@ func TestSummarizeAdoptionFormRendersCustomAnswers(t *testing.T) {
 	}
 }
 
-func TestSummarizeAdoptionFormRejectsEmptyModelOutput(t *testing.T) {
+func TestSummarizeAdoptionFormRejectsEmptyModelOutput(t *testing.T) { // UT-BE-SUMM-04
 	service := NewAdoptionSummaryService(&stubGenerator{text: "   "})
 
 	if _, err := service.SummarizeAdoptionForm(context.Background(), sampleInput()); !errors.Is(err, domain.ErrAIEmptyResponse) {
@@ -158,7 +158,7 @@ func TestSummarizeAdoptionFormRejectsEmptyModelOutput(t *testing.T) {
 	}
 }
 
-func TestSummarizeAdoptionFormPropagatesProviderErrors(t *testing.T) {
+func TestSummarizeAdoptionFormPropagatesProviderErrors(t *testing.T) { // UT-BE-SUMM-04
 	service := NewAdoptionSummaryService(&stubGenerator{err: domain.ErrAIRateLimited})
 
 	if _, err := service.SummarizeAdoptionForm(context.Background(), sampleInput()); !errors.Is(err, domain.ErrAIRateLimited) {
@@ -166,7 +166,7 @@ func TestSummarizeAdoptionFormPropagatesProviderErrors(t *testing.T) {
 	}
 }
 
-func TestFreeTextCapsLongAnswersOnRuneBoundaries(t *testing.T) {
+func TestFreeTextCapsLongAnswersOnRuneBoundaries(t *testing.T) { // UT-BE-SUMM-05
 	// Thai is multi-byte: cutting on bytes would split a character.
 	long := strings.Repeat("ก", maxAnswerChars+50)
 
@@ -182,7 +182,7 @@ func TestFreeTextCapsLongAnswersOnRuneBoundaries(t *testing.T) {
 	}
 }
 
-func TestSummarizeAdoptionFormRendersChoiceAnswersAsText(t *testing.T) {
+func TestSummarizeAdoptionFormRendersChoiceAnswersAsText(t *testing.T) { // UT-BE-SUMM-03
 	// The database stores an index; the model must see the sentence the
 	// adopter actually picked, not a number.
 	gen := &stubGenerator{text: "ok"}
@@ -212,7 +212,7 @@ func TestSummarizeAdoptionFormRendersChoiceAnswersAsText(t *testing.T) {
 	}
 }
 
-func TestChoiceLabelFlagsAnswersOutsideTheOptionList(t *testing.T) {
+func TestChoiceLabelFlagsAnswersOutsideTheOptionList(t *testing.T) { // UT-BE-SUMM-03
 	// If the form is edited after submission, an old index may no longer
 	// point at the option the adopter chose. Guessing would misreport them.
 	got := questionQ4_1.choiceLabel(9)
