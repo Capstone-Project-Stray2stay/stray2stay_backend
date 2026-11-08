@@ -1,6 +1,8 @@
 package pet
 
 import (
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/S-nudhana/stray2stay/internal/core/domain"
@@ -51,6 +53,7 @@ func (h *HttpPetHandler) SelectAdopter(c *fiber.Ctx) error {
 	}
 
 	if err := h.service.SelectPetAdopter(c.Context(), petSelectAdopterPayload.Rid, uid); err != nil {
+		log.Printf("[SelectAdopter] uid %s rid %d: %v", uid, petSelectAdopterPayload.Rid, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to select adopter",
 		})
@@ -79,6 +82,7 @@ func (h *HttpPetHandler) ScreeningAnswerAdoptor(c *fiber.Ctx) error {
 
 	screeningAnswer, err := h.service.ScreeningAnswerAdoptor(c.Context(), screeningAnswerAdoptorPayload, uid)
 	if err != nil {
+		log.Printf("[ScreeningAnswerAdoptor] uid %s rid %d: %v", uid, screeningAnswerAdoptorPayload.Rid, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to query screening answers",
 		})
@@ -95,6 +99,7 @@ func (h *HttpPetHandler) AllAdoptors(c *fiber.Ctx) error {
 
 	adoptors, err := h.service.AllAdoptors(c.Context(), uid)
 	if err != nil {
+		log.Printf("[AllAdoptors] uid %s: %v", uid, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to retrieve adoptors",
 		})
@@ -111,6 +116,7 @@ func (h *HttpPetHandler) MyAdoptionRequests(c *fiber.Ctx) error {
 
 	requests, err := h.service.MyAdoptionRequests(c.Context(), uid)
 	if err != nil {
+		log.Printf("[MyAdoptionRequests] uid %s: %v", uid, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to retrieve your adoption requests",
 		})

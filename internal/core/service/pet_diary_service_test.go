@@ -2,7 +2,7 @@ package service
 
 import "testing"
 
-func TestParseDiaryDay(t *testing.T) {
+func TestParseDiaryDay(t *testing.T) { // UT-BE-DIARY-01
 	tests := []struct {
 		name    string
 		value   string

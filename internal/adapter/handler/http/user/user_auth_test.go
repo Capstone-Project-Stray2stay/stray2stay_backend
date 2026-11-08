@@ -88,7 +88,7 @@ func postJSON(t *testing.T, app *fiber.App, path string, body string) *http.Resp
 	return response
 }
 
-func TestLoginValidatesRequestBeforeCallingService(t *testing.T) {
+func TestLoginValidatesRequestBeforeCallingService(t *testing.T) { // UT-BE-AUTH-01
 	for _, body := range []string{
 		`{"email":"bad-email","password":"password123"}`,
 		`{"email":"adopter@example.com","password":"short"}`,
@@ -108,7 +108,7 @@ func TestLoginValidatesRequestBeforeCallingService(t *testing.T) {
 	}
 }
 
-func TestLoginReturnsSignedHttpOnlyCookie(t *testing.T) {
+func TestLoginReturnsSignedHttpOnlyCookie(t *testing.T) { // UT-BE-AUTH-02
 	stub := &authServiceStub{loginUID: "user-123"}
 	response := postJSON(t, newAuthTestApp(t, stub), "/login", `{"email":"adopter@example.com","password":"password123"}`)
 	defer response.Body.Close()
@@ -149,7 +149,7 @@ func TestLoginReturnsSignedHttpOnlyCookie(t *testing.T) {
 	}
 }
 
-func TestLoginReturnsUnauthorizedWhenCredentialsFail(t *testing.T) {
+func TestLoginReturnsUnauthorizedWhenCredentialsFail(t *testing.T) { // UT-BE-AUTH-03
 	stub := &authServiceStub{loginErr: errors.New("invalid credentials")}
 	response := postJSON(t, newAuthTestApp(t, stub), "/login", `{"email":"adopter@example.com","password":"password123"}`)
 	defer response.Body.Close()
@@ -162,7 +162,7 @@ func TestLoginReturnsUnauthorizedWhenCredentialsFail(t *testing.T) {
 	}
 }
 
-func TestRegisterValidatesAndForwardsRequest(t *testing.T) {
+func TestRegisterValidatesAndForwardsRequest(t *testing.T) { // UT-BE-REG-01
 	t.Run("valid registration", func(t *testing.T) {
 		stub := &authServiceStub{}
 		response := postJSON(t, newAuthTestApp(t, stub), "/register", `{"email":"ada@example.com","password":"password123","firstName":"Ada","lastName":"Lovelace"}`)

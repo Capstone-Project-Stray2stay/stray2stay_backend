@@ -94,7 +94,7 @@ func waitForUpdate(t *testing.T, repo *fakePetRepo) summaryUpdate {
 	}
 }
 
-func TestAdoptPetStoresGeneratedSummary(t *testing.T) {
+func TestAdoptPetStoresGeneratedSummary(t *testing.T) { // UT-BE-ADSM-01
 	repo := newFakePetRepo(42)
 	repo.questions = []domain.CustomScreeningQuestion{
 		{QuestionID: 9, QuestionText: "Who else lives with you?", QuestionType: "ESSAY"},
@@ -137,7 +137,7 @@ func TestAdoptPetStoresGeneratedSummary(t *testing.T) {
 	}
 }
 
-func TestAdoptPetMarksSummaryFailedOnPermanentError(t *testing.T) {
+func TestAdoptPetMarksSummaryFailedOnPermanentError(t *testing.T) { // UT-BE-ADSM-02
 	repo := newFakePetRepo(43)
 
 	adoptWithStubs(t, repo, summarizerFunc(func(ctx context.Context, in domain.AdoptionSummaryInput) (string, error) {
@@ -153,7 +153,7 @@ func TestAdoptPetMarksSummaryFailedOnPermanentError(t *testing.T) {
 	}
 }
 
-func TestAdoptPetLeavesSummaryPendingOnTransientError(t *testing.T) {
+func TestAdoptPetLeavesSummaryPendingOnTransientError(t *testing.T) { // UT-BE-ADSM-02
 	repo := newFakePetRepo(44)
 
 	done := make(chan struct{})
@@ -170,7 +170,7 @@ func TestAdoptPetLeavesSummaryPendingOnTransientError(t *testing.T) {
 	}
 }
 
-func TestAdoptPetWithoutSummarizerDoesNothing(t *testing.T) {
+func TestAdoptPetWithoutSummarizerDoesNothing(t *testing.T) { // UT-BE-ADSM-03
 	repo := newFakePetRepo(45)
 
 	adoptWithStubs(t, repo, nil, nil) // nil interface: AI disabled
@@ -182,7 +182,7 @@ func TestAdoptPetWithoutSummarizerDoesNothing(t *testing.T) {
 	}
 }
 
-func TestSummaryTimeoutCoversTheClientRetryBudget(t *testing.T) {
+func TestSummaryTimeoutCoversTheClientRetryBudget(t *testing.T) { // UT-BE-ADSM-04
 	// A deadline shorter than the generator's own budget truncates its
 	// retries and hides the real error, which is exactly the failure this
 	// derivation exists to prevent.
@@ -197,7 +197,7 @@ func TestSummaryTimeoutCoversTheClientRetryBudget(t *testing.T) {
 	}
 }
 
-func TestSummaryTimeoutFallsBackWithoutASummarizer(t *testing.T) {
+func TestSummaryTimeoutFallsBackWithoutASummarizer(t *testing.T) { // UT-BE-ADSM-04
 	service := NewPetService(newFakePetRepo(1), nil, nil, nil, nil).(*PetServiceImpl)
 
 	if got := service.summaryTimeout(); got != fallbackSummaryTimeout {
