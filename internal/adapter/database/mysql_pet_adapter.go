@@ -767,7 +767,7 @@ func (m *MySQLPetAdapter) GetScreeningAnswer(rehomeID int, uid string) (domain.S
 	a.AISummary = aiSummary.String
 
 	rows, err := m.mysql_db.Query(`
-		SELECT q.question_id, q.question_text, q.question_type, a.answer_value
+		SELECT q.question_id, q.question_text, q.question_type, q.question_images, a.answer_value
 		FROM Pets_Rehoming_Answers a
 		JOIN Pets_Screening_Questions q ON a.answer_questionId = q.question_id
 		WHERE a.answer_rehomeId = ?
@@ -781,9 +781,14 @@ func (m *MySQLPetAdapter) GetScreeningAnswer(rehomeID int, uid string) (domain.S
 	customAnswers := make([]domain.CustomAnswerResponse, 0)
 	for rows.Next() {
 		var ca domain.CustomAnswerResponse
-		var valueRaw []byte
-		if scanErr := rows.Scan(&ca.QuestionID, &ca.QuestionText, &ca.QuestionType, &valueRaw); scanErr != nil {
+		var imagesRaw, valueRaw []byte
+		if scanErr := rows.Scan(&ca.QuestionID, &ca.QuestionText, &ca.QuestionType, &imagesRaw, &valueRaw); scanErr != nil {
 			return domain.ScreeningAnswer{}, errors.New("fail to get screening answer")
+		}
+		if len(imagesRaw) > 0 {
+			if unmarshalErr := json.Unmarshal(imagesRaw, &ca.QuestionImages); unmarshalErr != nil {
+				return domain.ScreeningAnswer{}, errors.New("fail to parse screening question images")
+			}
 		}
 		ca.Value = json.RawMessage(valueRaw)
 		customAnswers = append(customAnswers, ca)
@@ -1048,7 +1053,7 @@ func (m *MySQLPetAdapter) GetScreeningQuestions(pid int) (questions []domain.Cus
 
 	rows, err := m.mysql_db.Query(`
 		SELECT question_id, question_type, question_text, question_options,
-		       question_required, question_order
+		       question_images, question_required, question_order
 		FROM Pets_Screening_Questions
 		WHERE question_petId = ?
 		ORDER BY question_order ASC, question_id ASC
@@ -1061,13 +1066,18 @@ func (m *MySQLPetAdapter) GetScreeningQuestions(pid int) (questions []domain.Cus
 	questions = make([]domain.CustomScreeningQuestion, 0)
 	for rows.Next() {
 		var q domain.CustomScreeningQuestion
-		var optionsRaw []byte
-		if scanErr := rows.Scan(&q.QuestionID, &q.QuestionType, &q.QuestionText, &optionsRaw, &q.QuestionRequired, &q.QuestionOrder); scanErr != nil {
+		var optionsRaw, imagesRaw []byte
+		if scanErr := rows.Scan(&q.QuestionID, &q.QuestionType, &q.QuestionText, &optionsRaw, &imagesRaw, &q.QuestionRequired, &q.QuestionOrder); scanErr != nil {
 			return nil, false, errors.New("fail to get screening questions")
 		}
 		if len(optionsRaw) > 0 {
 			if unmarshalErr := json.Unmarshal(optionsRaw, &q.QuestionOptions); unmarshalErr != nil {
 				return nil, false, errors.New("fail to parse screening question options")
+			}
+		}
+		if len(imagesRaw) > 0 {
+			if unmarshalErr := json.Unmarshal(imagesRaw, &q.QuestionImages); unmarshalErr != nil {
+				return nil, false, errors.New("fail to parse screening question images")
 			}
 		}
 		questions = append(questions, q)
@@ -1128,12 +1138,18 @@ func (m *MySQLPetAdapter) SaveScreeningQuestions(uid string, pid int, questions 
 			err = optionsErr
 			return errors.New("fail to save screening questions")
 		}
+		// Same JSON-or-NULL encoding as options: most questions carry no illustration photos
+		imagesRaw, imagesErr := optionsValue(q.QuestionImages)
+		if imagesErr != nil {
+			err = imagesErr
+			return errors.New("fail to save screening questions")
+		}
 		if _, execErr := tx.Exec(`
 			INSERT INTO Pets_Screening_Questions (
 				question_petId, question_type, question_text, question_options,
-				question_required, question_order
-			) VALUES (?, ?, ?, ?, ?, ?)
-		`, pid, q.QuestionType, q.QuestionText, optionsRaw, q.QuestionRequired, q.QuestionOrder); execErr != nil {
+				question_images, question_required, question_order
+			) VALUES (?, ?, ?, ?, ?, ?, ?)
+		`, pid, q.QuestionType, q.QuestionText, optionsRaw, imagesRaw, q.QuestionRequired, q.QuestionOrder); execErr != nil {
 			err = execErr
 			return errors.New("fail to save screening questions")
 		}

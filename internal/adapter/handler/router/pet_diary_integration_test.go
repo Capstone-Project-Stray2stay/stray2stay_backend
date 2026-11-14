@@ -409,6 +409,37 @@ func TestPetRouterSaveScreeningQuestionsRequiresTextExceptForImageQuestions(t *t
 	})
 }
 
+func TestPetRouterSaveScreeningQuestionsKeepsIllustrationImages(t *testing.T) { // IT-BE-SCREEN-04
+	t.Run("a choice question with photos keeps both", func(t *testing.T) {
+		sqlRepo := &fakePetSQLRepo{}
+		app := newPetRouteIntegrationApp(t, sqlRepo, &fakePetMongoRepo{}, &fakeUserRepo{}, &fakeUploader{})
+
+		body := `{"questions":[{"questionType":"MULTIPLE_CHOICE","questionText":"Which bed?",` +
+			`"questionOptions":["Basket","Crate"],"questionImages":["https://img/a.jpg","https://img/b.jpg"],"questionOrder":1}]}`
+		response := doRequest(t, app, http.MethodPut, "/api/pets/42/screening-questions", body, authCookie(t, "owner-1"))
+
+		expectStatus(t, response, http.StatusOK)
+		saved := sqlRepo.savedQuestions
+		if len(saved) != 1 || saved[0].QuestionType != "MULTIPLE_CHOICE" || len(saved[0].QuestionOptions) != 2 || len(saved[0].QuestionImages) != 2 {
+			t.Fatalf("saved = %+v, want the type, both options and both photos", saved)
+		}
+	})
+
+	t.Run("more than four photos is rejected", func(t *testing.T) {
+		sqlRepo := &fakePetSQLRepo{}
+		app := newPetRouteIntegrationApp(t, sqlRepo, &fakePetMongoRepo{}, &fakeUserRepo{}, &fakeUploader{})
+
+		body := `{"questions":[{"questionType":"ESSAY","questionText":"Why?",` +
+			`"questionImages":["a","b","c","d","e"],"questionOrder":1}]}`
+		response := doRequest(t, app, http.MethodPut, "/api/pets/42/screening-questions", body, authCookie(t, "owner-1"))
+
+		expectStatus(t, response, http.StatusBadRequest)
+		if sqlRepo.saveQuestionsCalls != 0 {
+			t.Fatal("five illustration photos reached the repository")
+		}
+	})
+}
+
 func TestPetRouterUploadScreeningAnswerImageRequiresTheFilePart(t *testing.T) { // IT-BE-SCREEN-03
 	uploader := &fakeUploader{}
 	app := newPetRouteIntegrationApp(t, &fakePetSQLRepo{}, &fakePetMongoRepo{}, &fakeUserRepo{}, uploader)

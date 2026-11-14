@@ -120,6 +120,7 @@ CREATE TABLE `Pets_Screening_Questions`(
     `question_type`     ENUM('CHECKLIST', 'MULTIPLE_CHOICE', 'ESSAY', 'IMAGE') NOT NULL,
     `question_text`     TEXT NOT NULL,
     `question_options`  JSON NULL,
+    `question_images`   JSON NULL,
     `question_required` BOOLEAN NOT NULL DEFAULT TRUE,
     `question_order`    INT NOT NULL DEFAULT 0,
     `question_createAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -161,3 +162,8 @@ ALTER TABLE `Pets_Rehoming`
 ALTER TABLE `Pets_Diary`
     MODIFY `diary_createAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     MODIFY `diary_updateAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+-- Illustration photos on any screening question (shown under the question text).
+-- For databases created before this column existed:
+ALTER TABLE `Pets_Screening_Questions`
+    ADD COLUMN `question_images` JSON NULL AFTER `question_options`;

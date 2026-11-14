@@ -147,6 +147,9 @@ type ScreeningQuestionInput struct {
 	QuestionType     string   `json:"questionType" validate:"required,oneof=CHECKLIST MULTIPLE_CHOICE ESSAY IMAGE"`
 	QuestionText     string   `json:"questionText" validate:"required_unless=QuestionType IMAGE"`
 	QuestionOptions  []string `json:"questionOptions"`
+	// QuestionImages are illustration photos shown under the question text, for any question
+	// type (an IMAGE question's own photos stay in QuestionOptions).
+	QuestionImages   []string `json:"questionImages" validate:"max=4"`
 	QuestionRequired bool     `json:"questionRequired"`
 	QuestionOrder    int      `json:"questionOrder"`
 }
@@ -166,6 +169,7 @@ type CustomScreeningQuestion struct {
 	QuestionType     string   `json:"questionType"`
 	QuestionText     string   `json:"questionText"`
 	QuestionOptions  []string `json:"questionOptions,omitempty"`
+	QuestionImages   []string `json:"questionImages,omitempty"`
 	QuestionRequired bool     `json:"questionRequired"`
 	QuestionOrder    int      `json:"questionOrder"`
 }
@@ -187,10 +191,11 @@ type CustomAnswerInput struct {
 // text/type so the owner's screening-answer view can render it without a
 // second lookup.
 type CustomAnswerResponse struct {
-	QuestionID   int             `json:"questionId"`
-	QuestionText string          `json:"questionText"`
-	QuestionType string          `json:"questionType"`
-	Value        json.RawMessage `json:"value"`
+	QuestionID     int             `json:"questionId"`
+	QuestionText   string          `json:"questionText"`
+	QuestionType   string          `json:"questionType"`
+	QuestionImages []string        `json:"questionImages,omitempty"`
+	Value          json.RawMessage `json:"value"`
 }
 
 type PetAdoptResponse struct {
